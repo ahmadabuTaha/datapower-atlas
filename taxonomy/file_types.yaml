@@ -1,0 +1,639 @@
+version: "1.0"
+
+taxonomy_name: file_types
+
+description: >
+  Canonical file-type taxonomy for IBM DataPower exported archives.
+  This taxonomy is the authoritative source for file classification,
+  indexing behavior, agent retrieval, reporting, comparison, and
+  downstream analysis.
+
+# ============================================================
+# GLOBAL CLASSIFICATION RULES
+# ============================================================
+
+classification_rules:
+
+  case_sensitive_extensions: false
+  case_sensitive_filenames: false
+
+  preserve_original_filename: true
+  preserve_original_extension: true
+  preserve_relative_path: true
+
+  preserve_sha256: true
+  preserve_file_size: true
+
+  allow_unclassified_files: true
+
+  classification_precedence:
+    - exact_filename
+    - extension
+    - missing_extension
+    - unsupported_extension
+
+  prohibited_classification_labels:
+    - other
+    - others
+    - misc
+    - miscellaneous
+    - unknown
+    - various
+    - many
+    - different
+    - generic
+
+
+# ============================================================
+# STANDARD FLAGS
+#
+# Python loads these defaults first.
+# Each file type may override only what differs.
+# ============================================================
+
+standard_flags:
+
+  defaults:
+
+    index_file: true
+
+    index_metadata: true
+
+    index_content: false
+
+    searchable: true
+
+    compare_across_environments: true
+
+    calculate_sha256: true
+
+    extract_references: false
+
+    extract_endpoints: false
+
+    extract_imports: false
+
+    extract_includes: false
+
+    extract_symbols: false
+
+    extract_namespaces: false
+
+    extract_service_definitions: false
+
+    extract_schema_definitions: false
+
+    extract_configuration_properties: false
+
+    test_discovery_relevant: true
+
+    modernization_analysis_relevant: true
+
+    codegraph_candidate: false
+
+    agent_retrieval_enabled: true
+
+    may_contain_secret_value: false
+
+    requires_content_sensitivity_scan: false
+
+    require_redaction_if_detected: false
+
+    allow_raw_content_in_search_index_before_scan: true
+
+    allow_raw_content_in_agent_context_before_scan: true
+
+    allow_raw_content_in_reports_before_scan: true
+
+    allow_sanitized_content_in_search_index: true
+
+    allow_sanitized_content_in_agent_context: true
+
+    allow_sanitized_content_in_reports: true
+
+    require_redaction: false
+
+    allow_raw_content_in_search_index: true
+
+    allow_raw_content_in_agent_context: true
+
+    allow_raw_content_in_reports: true
+
+    preserve_source_evidence: true
+
+
+# ============================================================
+# AGENT INDEXING MODES
+# ============================================================
+
+agent_indexing_modes:
+
+  full_text:
+    index_content: true
+    agent_retrieval_enabled: true
+    raw_content_policy: full
+
+  selected_content:
+    index_content: true
+    agent_retrieval_enabled: true
+    raw_content_policy: selected_sections
+
+  metadata_and_selected_content:
+    index_content: true
+    agent_retrieval_enabled: true
+    raw_content_policy: metadata_and_selected_sections
+
+  metadata_only:
+    index_content: false
+    agent_retrieval_enabled: true
+    raw_content_policy: metadata_only
+
+  excluded_from_agent_content:
+    index_content: false
+    agent_retrieval_enabled: false
+    raw_content_policy: none
+
+
+# ============================================================
+# FILE TYPES
+# ============================================================
+
+file_types:
+
+  datapower_cfg:
+
+    extensions:
+      - ".cfg"
+
+    description: "IBM DataPower configuration file"
+
+    agent_indexing: metadata_and_selected_content
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_endpoints: true
+      extract_configuration_properties: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  xslt_stylesheet:
+
+    extensions:
+      - ".xsl"
+      - ".xslt"
+
+    description: "XSLT transformation stylesheet"
+
+    agent_indexing: full_text
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_endpoints: true
+      extract_imports: true
+      extract_includes: true
+      extract_namespaces: true
+      extract_symbols: true
+      test_discovery_relevant: true
+      codegraph_candidate: true
+
+
+  gateway_script_javascript:
+
+    extensions:
+      - ".js"
+
+    description: "IBM DataPower GatewayScript or JavaScript source"
+
+    agent_indexing: full_text
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_endpoints: true
+      extract_imports: true
+      extract_symbols: true
+      test_discovery_relevant: true
+      codegraph_candidate: true
+
+
+  wsdl_definition:
+
+    extensions:
+      - ".wsdl"
+
+    description: "WSDL service definition"
+
+    agent_indexing: full_text
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_imports: true
+      extract_namespaces: true
+      extract_service_definitions: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  xsd_schema:
+
+    extensions:
+      - ".xsd"
+
+    description: "XML schema definition"
+
+    agent_indexing: full_text
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_imports: true
+      extract_includes: true
+      extract_namespaces: true
+      extract_schema_definitions: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  xml_document:
+
+    extensions:
+      - ".xml"
+
+    description: "XML document"
+
+    agent_indexing: selected_content
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      extract_references: true
+      extract_endpoints: true
+      extract_namespaces: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  json_document:
+
+    extensions:
+      - ".json"
+
+    description: "JSON document"
+
+    agent_indexing: full_text
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+      extract_references: true
+      extract_endpoints: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  mq_client_ini:
+
+    exact_filenames:
+      - "mqclient.ini"
+
+    description: "IBM MQ client configuration"
+
+    agent_indexing: selected_content
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+      extract_references: true
+      extract_endpoints: true
+      extract_configuration_properties: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  ini_configuration:
+
+    extensions:
+      - ".ini"
+
+    description: "INI configuration file"
+
+    agent_indexing: selected_content
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+      extract_references: true
+      extract_endpoints: true
+      extract_configuration_properties: true
+      test_discovery_relevant: true
+      codegraph_candidate: false
+
+
+  pem_certificate_or_key_material:
+
+    extensions:
+      - ".pem"
+
+    description: "PEM encoded certificate or key material"
+
+    agent_indexing: metadata_only
+
+    flags:
+      extract_references: false
+      test_discovery_relevant: true
+
+      may_contain_secret_value: true
+      require_redaction: true
+
+      allow_raw_content_in_search_index: false
+      allow_raw_content_in_agent_context: false
+      allow_raw_content_in_reports: false
+
+      codegraph_candidate: false
+
+
+  cer_certificate:
+
+    extensions:
+      - ".cer"
+
+    description: "Certificate file"
+
+    agent_indexing: metadata_only
+
+    flags:
+      extract_references: false
+      test_discovery_relevant: true
+
+      may_contain_secret_value: false
+      require_redaction: false
+
+      allow_raw_content_in_search_index: false
+      allow_raw_content_in_agent_context: false
+      allow_raw_content_in_reports: false
+
+      codegraph_candidate: false
+
+
+# ============================================================
+# UNCLASSIFIED FILE HANDLING
+#
+# These are explicit technical statuses.
+# They are not generic buckets such as "other" or "unknown".
+# ============================================================
+
+unclassified_file_types:
+
+  unclassified_due_to_missing_extension:
+
+    description: >
+      File has no extension and has not yet been classified
+      through content inspection.
+
+    agent_indexing: metadata_only
+
+    flags:
+      index_file: true
+      index_metadata: true
+      index_content: false
+      searchable: true
+
+      extract_references: false
+      extract_endpoints: false
+
+      test_discovery_relevant: false
+
+      may_contain_secret_value: false
+
+      require_redaction: false
+
+      codegraph_candidate: false
+
+
+  unclassified_due_to_unsupported_extension:
+
+    description: >
+      File extension is present but no classification rule
+      currently exists for that extension.
+
+    agent_indexing: metadata_only
+
+    flags:
+      index_file: true
+      index_metadata: true
+      index_content: false
+      searchable: true
+
+      extract_references: false
+      extract_endpoints: false
+
+      test_discovery_relevant: false
+
+      codegraph_candidate: false
+
+
+  unclassified_due_to_ambiguous_extension:
+
+    description: >
+      File extension matches more than one possible file type
+      and additional content inspection is required.
+
+    agent_indexing: metadata_only
+
+    flags:
+      index_file: true
+      index_metadata: true
+      index_content: false
+      searchable: true
+
+      test_discovery_relevant: false
+
+      codegraph_candidate: false
+
+
+  unclassified_due_to_content_detection_gap:
+
+    description: >
+      Extension classification is insufficient and the current
+      content detector cannot reliably determine the file type.
+
+    agent_indexing: metadata_only
+
+    flags:
+      index_file: true
+      index_metadata: true
+      index_content: false
+      searchable: true
+
+      test_discovery_relevant: false
+
+      codegraph_candidate: false
+
+
+# ============================================================
+# CLASSIFICATION OUTPUT CONTRACT
+#
+# Every indexed file must produce these fields.
+# ============================================================
+
+classification_output:
+
+  required_fields:
+
+    - file_id
+
+    - environment
+
+    - relative_path
+    - file_name
+    - extension
+
+    - size_bytes
+    - sha256
+
+    - classification
+    - classification_status
+    - classification_reason
+    - classification_rule
+
+    - agent_indexing
+
+    - index_file
+    - index_metadata
+    - index_content
+    - searchable
+
+    - compare_across_environments
+
+    - extract_references
+    - extract_endpoints
+    - extract_imports
+    - extract_includes
+    - extract_symbols
+    - extract_namespaces
+
+    - extract_service_definitions
+    - extract_schema_definitions
+    - extract_configuration_properties
+
+    - test_discovery_relevant
+    - modernization_analysis_relevant
+
+    - codegraph_candidate
+    - agent_retrieval_enabled
+
+    - requires_content_sensitivity_scan
+    - may_contain_secret_value
+    - require_redaction_if_detected
+
+    - allow_raw_content_in_search_index_before_scan
+    - allow_raw_content_in_agent_context_before_scan
+    - allow_raw_content_in_reports_before_scan
+
+    - allow_sanitized_content_in_search_index
+    - allow_sanitized_content_in_agent_context
+    - allow_sanitized_content_in_reports
+
+    - sensitivity_scan_status
+    - contains_sensitive_content
+    - detected_secret_count
+    - detected_sensitivity_types
+    - sanitized_content_available
+    - sensitivity_scan_timestamp
+
+    - preserve_source_evidence
+
+
+  classified_status:
+    value: classified
+
+
+  stable_file_id:
+
+    format: >
+      file:{environment}:{relative_path}
+
+
+# ============================================================
+# VALIDATION
+# ============================================================
+
+validation:
+
+  fail_on_duplicate_extension: true
+
+  allow_exact_filename_to_override_extension: true
+
+  fail_on_duplicate_exact_filename: true
+
+  fail_on_missing_description: true
+
+  fail_on_missing_agent_indexing_mode: true
+
+  fail_on_undefined_agent_indexing_mode: true
+
+  fail_on_prohibited_classification_label: true
+
+  allow_unclassified_files: true
+
+  require_unclassified_reason: true
+
+  require_sha256: true
+
+  require_environment: true
+
+  require_relative_path: true

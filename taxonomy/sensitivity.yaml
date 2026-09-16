@@ -1,0 +1,641 @@
+version: "1.0"
+
+taxonomy_name: sensitivity
+
+description: >
+  Central sensitivity and exposure policy for DataPower modernization
+  indexing, analysis, Codex retrieval, reports, CodeGraph ingestion,
+  embeddings, and generated artifacts.
+
+# ============================================================
+# SENSITIVITY LEVELS
+# ============================================================
+
+sensitivity_levels:
+
+  public_configuration:
+
+    description: >
+      Configuration or source content that does not normally contain
+      credentials, secrets, private keys, tokens, or protected material.
+
+    rank: 10
+
+    flags:
+      sensitive: false
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: true
+      allow_raw_value_indexing: true
+
+      allow_full_text_search: true
+      allow_agent_context: true
+      allow_reports: true
+
+      allow_codegraph: true
+      allow_embeddings: true
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+
+      require_redaction: false
+      require_hash_only: false
+
+
+  internal_configuration:
+
+    description: >
+      Internal technical configuration that is not inherently secret,
+      but should be treated as internal architecture information.
+
+    rank: 20
+
+    flags:
+      sensitive: true
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: true
+      allow_raw_value_indexing: true
+
+      allow_full_text_search: true
+      allow_agent_context: true
+      allow_reports: true
+
+      allow_codegraph: true
+      allow_embeddings: true
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+
+      require_redaction: false
+      require_hash_only: false
+
+
+  security_configuration:
+
+    description: >
+      Security-related configuration such as TLS profiles, certificate
+      references, AAA configuration, validation credentials, ACLs,
+      cryptographic settings, or authentication configuration.
+
+    rank: 30
+
+    flags:
+      sensitive: true
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: true
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: true
+      allow_agent_context: true
+      allow_reports: true
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+
+      require_redaction: true
+      require_hash_only: false
+
+
+  credential_reference:
+
+    description: >
+      Reference to a credential, password alias, key alias, token alias,
+      certificate alias, or secret identifier without storing the secret value.
+
+    rank: 40
+
+    flags:
+      sensitive: true
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: true
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: true
+      allow_agent_context: true
+      allow_reports: true
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: false
+
+      require_redaction: true
+      require_hash_only: false
+
+
+  credential_value:
+
+    description: >
+      Credential-like value such as password, API key, bearer token,
+      authentication secret, connection password, or embedded secret.
+
+    rank: 60
+
+    flags:
+      sensitive: true
+      secret_bearing: true
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: false
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: false
+      allow_agent_context: false
+      allow_reports: false
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: false
+
+      require_redaction: true
+      require_hash_only: true
+
+
+  private_key_material:
+
+    description: >
+      Private cryptographic key material or files that may contain
+      private keys.
+
+    rank: 70
+
+    flags:
+      sensitive: true
+      secret_bearing: true
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: false
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: false
+      allow_agent_context: false
+      allow_reports: false
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: false
+      allow_sanitized_content_in_agent_context: false
+      allow_sanitized_content_in_reports: false
+
+      require_redaction: true
+      require_hash_only: true
+
+
+  certificate_public_material:
+
+    description: >
+      Public certificate material that may be indexed as metadata and
+      inspected structurally, but should not be inserted into agent
+      context unless required.
+
+    rank: 25
+
+    flags:
+      sensitive: true
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: true
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: false
+      allow_agent_context: false
+      allow_reports: true
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: false
+      allow_sanitized_content_in_agent_context: false
+      allow_sanitized_content_in_reports: false
+
+      require_redaction: false
+      require_hash_only: false
+
+
+  personal_or_identity_data:
+
+    description: >
+      Personal, identity, account, employee, customer, or citizen data
+      discovered inside payload samples, XML documents, JSON documents,
+      scripts, test data, or configuration.
+
+    rank: 50
+
+    flags:
+      sensitive: true
+      secret_bearing: false
+
+      allow_metadata_indexing: true
+      allow_normalized_value_indexing: false
+      allow_raw_value_indexing: false
+
+      allow_full_text_search: false
+      allow_agent_context: false
+      allow_reports: false
+
+      allow_codegraph: false
+      allow_embeddings: false
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: false
+
+      require_redaction: true
+      require_hash_only: false
+
+
+# ============================================================
+# RUNTIME SCAN RESULTS
+# ============================================================
+
+runtime_scan_fields:
+
+  sensitivity_scan_status:
+    type: enum
+    allowed_values:
+      - not_scanned
+      - completed
+      - completed_with_findings
+      - failed
+      - partial
+
+  contains_sensitive_content:
+    type: boolean_or_null
+    semantics:
+      null: content has not been conclusively scanned
+      false: scan completed and no sensitive content was detected
+      true: scan completed and sensitive content was detected
+
+  detected_secret_count:
+    type: integer
+    minimum: 0
+
+  detected_sensitivity_types:
+    type: list
+
+  sanitized_content_available:
+    type: boolean
+
+  sensitivity_scan_timestamp:
+    type: timestamp_or_null
+
+
+# ============================================================
+# CONTENT SIGNALS
+# ============================================================
+
+content_signals:
+
+  credential_keywords:
+
+    values:
+      - password
+      - passwd
+      - pwd
+      - secret
+      - client-secret
+      - client_secret
+      - api-key
+      - api_key
+      - access-token
+      - access_token
+      - bearer
+      - authorization
+
+    suggested_sensitivity:
+      credential_value
+
+
+  credential_reference_keywords:
+
+    values:
+      - password-alias
+      - password_alias
+      - credential
+      - credential-name
+      - credential_name
+      - key-alias
+      - key_alias
+      - secret-alias
+      - secret_alias
+
+    suggested_sensitivity:
+      credential_reference
+
+
+  private_key_markers:
+
+    values:
+      - "-----BEGIN PRIVATE KEY-----"
+      - "-----BEGIN RSA PRIVATE KEY-----"
+      - "-----BEGIN EC PRIVATE KEY-----"
+      - "-----BEGIN ENCRYPTED PRIVATE KEY-----"
+
+    suggested_sensitivity:
+      private_key_material
+
+
+  certificate_markers:
+
+    values:
+      - "-----BEGIN CERTIFICATE-----"
+
+    suggested_sensitivity:
+      certificate_public_material
+
+
+  authentication_headers:
+
+    values:
+      - Authorization
+      - Proxy-Authorization
+      - X-API-Key
+      - Api-Key
+
+    suggested_sensitivity:
+      credential_value
+
+
+# ============================================================
+# PROPERTY POLICIES
+# ============================================================
+
+property_policies:
+
+  always_redact_exact_names:
+
+    - password
+    - passwd
+    - pwd
+    - secret
+    - client-secret
+    - client_secret
+    - api-key
+    - api_key
+    - token
+    - access-token
+    - access_token
+    - refresh-token
+    - refresh_token
+    - authorization
+
+
+  preserve_reference_names:
+
+    - password-alias
+    - password_alias
+    - credential-name
+    - credential_name
+    - key-alias
+    - key_alias
+    - certificate
+    - certificate-name
+    - certificate_name
+
+
+  preserve_boolean_properties:
+
+    - enabled
+    - disabled
+    - admin-state
+    - ignore-expiration
+
+
+# ============================================================
+# REDACTION POLICIES
+# ============================================================
+
+redaction:
+
+  replacement_token: "[REDACTED]"
+
+  hash_algorithm: sha256
+
+  preserve:
+
+    - property_name
+    - source_file
+    - line_number
+    - object_id
+    - file_id
+    - value_length
+    - value_sha256
+
+  do_not_preserve:
+
+    - raw_secret_value
+    - decoded_secret_value
+    - decrypted_secret_value
+
+
+# ============================================================
+# AGENT ACCESS POLICIES
+# ============================================================
+
+agent_access:
+
+  codex:
+
+    default_behavior: respect_sensitivity_flags
+
+    prohibited_raw_levels:
+      - credential_value
+      - private_key_material
+      - personal_or_identity_data
+
+
+  codegraph:
+
+    default_behavior: respect_sensitivity_flags
+
+    prohibited_levels:
+      - security_configuration
+      - credential_reference
+      - credential_value
+      - private_key_material
+      - certificate_public_material
+      - personal_or_identity_data
+
+
+  embeddings:
+
+    default_behavior: respect_sensitivity_flags
+
+    prohibited_levels:
+      - security_configuration
+      - credential_reference
+      - credential_value
+      - private_key_material
+      - certificate_public_material
+      - personal_or_identity_data
+
+
+  reports:
+
+    default_behavior: normalized_or_redacted
+
+    prohibited_raw_levels:
+      - credential_value
+      - private_key_material
+      - personal_or_identity_data
+
+
+# ============================================================
+# CLASSIFICATION STATUS
+# ============================================================
+
+classification_statuses:
+
+  sensitivity_classified:
+
+    description: >
+      Sensitivity level was determined from an explicit taxonomy,
+      file type, object type, property rule, or strong content signal.
+
+
+  sensitivity_unclassified_due_to_missing_policy:
+
+    description: >
+      Content was identified but no sensitivity policy currently
+      covers the discovered type or property.
+
+
+  sensitivity_unclassified_due_to_ambiguous_signal:
+
+    description: >
+      Multiple sensitivity signals were detected and the current
+      rules cannot safely resolve the final level.
+
+
+  sensitivity_unclassified_due_to_content_not_inspected:
+
+    description: >
+      Content has not yet been inspected and only metadata is available.
+
+
+# ============================================================
+# OUTPUT CONTRACT
+# ============================================================
+
+classification_output:
+
+  required_fields:
+
+    - sensitivity_level
+    - sensitivity_status
+    - sensitivity_reason
+    - sensitivity_rule
+
+    - sensitive
+    - secret_bearing
+
+    - allow_metadata_indexing
+    - allow_normalized_value_indexing
+    - allow_raw_value_indexing
+
+    - allow_full_text_search
+    - allow_agent_context
+    - allow_reports
+
+    - allow_codegraph
+    - allow_embeddings
+
+    - allow_sanitized_content_in_search_index
+    - allow_sanitized_content_in_agent_context
+    - allow_sanitized_content_in_reports
+
+    - require_redaction
+    - require_hash_only
+
+    - sensitivity_scan_status
+    - contains_sensitive_content
+    - detected_secret_count
+    - detected_sensitivity_types
+    - sanitized_content_available
+    - sensitivity_scan_timestamp
+
+
+# ============================================================
+# POST-SCAN ACCESS POLICY
+# ============================================================
+
+post_scan_policy:
+
+  if_scan_status_not_completed:
+    raw_content_access: deny
+
+  if_sensitive_content_detected:
+    raw_content_access: deny
+    sanitized_content_required: true
+
+  if_no_sensitive_content_detected:
+    raw_content_access: allow_if_file_type_policy_allows
+
+
+# ============================================================
+# RESOLUTION RULES
+# ============================================================
+
+resolution:
+
+  strategy: highest_rank_wins
+
+  sources_in_priority_order:
+
+    - explicit_property_policy
+    - content_signal
+    - datapower_object_policy
+    - file_type_policy
+    - default_policy
+
+  on_conflict:
+    use_more_restrictive_policy: true
+
+  never_downgrade_secret_bearing_content: true
+
+
+# ============================================================
+# VALIDATION
+# ============================================================
+
+validation:
+
+  fail_on_duplicate_sensitivity_level: true
+
+  fail_on_missing_rank: true
+
+  fail_on_missing_flags: true
+
+  fail_on_undefined_sensitivity_reference: true
+
+  require_reason_for_unclassified: true
+
+  allow_unclassified_sensitivity: true
+
+  prohibited_labels:
+    - unknown
+    - other
+    - others
+    - misc
+    - miscellaneous
+    - various

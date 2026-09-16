@@ -1,0 +1,500 @@
+version: 1
+
+relationships:
+
+  uses:
+    category: dependency
+    source_kinds:
+      - datapower_object
+    target_kinds:
+      - datapower_object
+    directed: true
+    transitive: false
+    description: "Object directly references another DataPower object."
+    evidence_required: true
+
+  executes:
+    category: execution
+    source_kinds:
+      - processing_action
+    target_kinds:
+      - xslt_stylesheet
+      - gateway_script_javascript
+      - taxonomy_constrained_at_runtime
+    directed: true
+    transitive: false
+    description: "Processing action executes a transformation or scripting artifact."
+    evidence_required: true
+
+  imports:
+    category: dependency
+    source_kinds:
+      - source_artifact
+      - datapower_object
+    target_kinds:
+      - source_artifact
+    directed: true
+    transitive: false
+    description: "Source artifact imports another artifact or module."
+    evidence_required: true
+
+  includes:
+    category: containment
+    source_kinds:
+      - source_artifact
+      - datapower_object
+    target_kinds:
+      - source_artifact
+    directed: true
+    transitive: false
+    description: "Source artifact includes another artifact or configuration fragment."
+    evidence_required: true
+
+  routes_to:
+    category: routing
+    source_kinds:
+      - datapower_service
+      - datapower_object
+    target_kinds:
+      - backend_endpoint
+      - service_endpoint
+      - taxonomy_constrained_at_runtime
+    directed: true
+    transitive: false
+    description: "Service or script routes traffic to an endpoint."
+    evidence_required: true
+
+  secured_by:
+    category: security
+    source_kinds:
+      - datapower_service
+      - datapower_object
+    target_kinds:
+      - ssl_server_profile
+      - ssl_client_profile
+      - crypto_profile
+      - security_policy
+    directed: true
+    transitive: false
+    description: "Service or endpoint uses TLS or crypto configuration for protection."
+    evidence_required: true
+
+  references_file:
+    category: reference
+    source_kinds:
+      - datapower_object
+    target_kinds:
+      - file_inventory_entry
+    directed: true
+    transitive: false
+    description: "Configuration object references a DataPower filesystem artifact."
+    evidence_required: true
+
+  contains_backend_member:
+    category: containment
+    source_kinds:
+      - load_balancer_group
+    target_kinds:
+      - backend_member
+    directed: true
+    transitive: false
+    description: "Load balancer group contains a backend member definition."
+    evidence_required: true
+
+  contains_processing_action:
+    category: containment
+    source_kinds:
+      - processing_rule
+    target_kinds:
+      - processing_action
+    directed: true
+    transitive: false
+    description: "Processing rule contains an individual processing action."
+    evidence_required: true
+
+  contains_processing_rule:
+    category: containment
+    source_kinds:
+      - style_policy
+    target_kinds:
+      - processing_rule
+    directed: true
+    transitive: false
+    description: "Style policy contains a processing rule."
+    evidence_required: true
+
+  executes_gatewayscript:
+    category: execution
+    source_kinds:
+      - processing_action
+    target_kinds:
+      - gateway_script_javascript
+    directed: true
+    transitive: false
+    description: "Processing action executes a GatewayScript program."
+    evidence_required: true
+
+  executes_xslt:
+    category: execution
+    source_kinds:
+      - processing_action
+    target_kinds:
+      - xslt_stylesheet
+    directed: true
+    transitive: false
+    description: "Processing action executes an XSLT stylesheet."
+    evidence_required: true
+
+  references_certificate_file:
+    category: reference
+    source_kinds:
+      - crypto_certificate
+    target_kinds:
+      - certificate_file
+    directed: true
+    transitive: false
+    description: "Crypto certificate object references the certificate file it is associated with."
+    evidence_required: true
+
+  references_mq_client_configuration:
+    category: reference
+    source_kinds:
+      - mq_queue_manager
+      - mq_source_protocol_handler
+    target_kinds:
+      - mq_client_configuration
+    directed: true
+    transitive: false
+    description: "MQ object references the client configuration file used for connectivity."
+    evidence_required: true
+
+  references_private_key_file:
+    category: reference
+    source_kinds:
+      - crypto_key
+    target_kinds:
+      - private_key_file
+    directed: true
+    transitive: false
+    description: "Crypto key references the private key file associated with that material."
+    evidence_required: true
+
+  references_schema:
+    category: reference
+    source_kinds:
+      - schema_exception_map
+      - xml_manager
+    target_kinds:
+      - xsd_schema
+    directed: true
+    transitive: false
+    description: "Object references a schema definition used for XML validation or exception mapping."
+    evidence_required: true
+
+  references_wsdl:
+    category: reference
+    source_kinds:
+      - web_service_proxy
+    target_kinds:
+      - wsdl_definition
+    directed: true
+    transitive: false
+    description: "Web service proxy references the WSDL definition it exposes or maps."
+    evidence_required: true
+
+  resolves_to:
+    category: network_resolution
+    source_kinds:
+      - host_alias
+    target_kinds:
+      - hostname
+      - ip_address
+      - endpoint
+    directed: true
+    transitive: false
+    description: "Host alias resolves to a hostname, IP address, or network endpoint."
+    evidence_required: true
+
+  rewrites_to:
+    category: transformation
+    source_kinds:
+      - url_rewrite_policy
+    target_kinds:
+      - url_pattern
+      - backend_endpoint
+      - taxonomy_constrained_at_runtime
+    directed: true
+    transitive: false
+    description: "URL rewrite policy rewrites an incoming URL or path to a target destination."
+    evidence_required: true
+
+  routes_logs_to:
+    category: logging
+    source_kinds:
+      - log_target
+    target_kinds:
+      - log_target
+      - logging_sink
+    directed: true
+    transitive: false
+    description: "Log target routes log output to a downstream logging target or sink."
+    evidence_required: true
+
+  routes_to_backend:
+    category: routing
+    source_kinds:
+      - service
+      - load_balancer_group
+      - url_map
+      - url_rewrite_policy
+      - b2b_gateway
+    target_kinds:
+      - backend_endpoint
+      - service_endpoint
+    directed: true
+    transitive: false
+    description: "Service or traffic flow routes requests to a backend endpoint."
+    evidence_required: true
+
+  routes_to_database:
+    category: database
+    source_kinds:
+      - sql_data_source
+      - processing_action
+    target_kinds:
+      - database_endpoint
+      - sql_data_source
+    directed: true
+    transitive: false
+    description: "SQL data source connects to a database endpoint or database service."
+    evidence_required: true
+
+  uses_b2b_profile:
+    category: dependency
+    source_kinds:
+      - b2b_gateway
+    target_kinds:
+      - b2b_profile
+    directed: true
+    transitive: false
+    description: "B2B gateway uses a configured B2B profile."
+    evidence_required: true
+
+  uses_crypto_certificate:
+    category: dependency
+    source_kinds:
+      - crypto_profile
+      - ssl_client_profile
+      - ssl_server_profile
+      - b2b_profile
+      - crypto_identification_credentials
+      - crypto_validation_credentials
+    target_kinds:
+      - crypto_certificate
+    directed: true
+    transitive: false
+    description: "Security or crypto object uses a certificate object."
+    evidence_required: true
+
+  uses_crypto_identification_credentials:
+    category: dependency
+    source_kinds:
+      - crypto_profile
+      - ssl_client_profile
+      - ssl_server_profile
+      - ssl_proxy_profile
+    target_kinds:
+      - crypto_identification_credentials
+    directed: true
+    transitive: false
+    description: "Security profile uses crypto identification credentials."
+    evidence_required: true
+
+  uses_crypto_key:
+    category: dependency
+    source_kinds:
+      - sftp_source_protocol_handler
+      - ssl_client_profile
+      - ssl_server_profile
+      - ssl_proxy_profile
+      - crypto_profile
+      - crypto_identification_credentials
+    target_kinds:
+      - crypto_key
+    directed: true
+    transitive: false
+    description: "Object uses a crypto key for signing, decryption, or key-based authentication."
+    evidence_required: true
+
+  uses_crypto_validation_credentials:
+    category: dependency
+    source_kinds:
+      - crypto_profile
+      - ssl_client_profile
+      - ssl_server_profile
+      - ssl_proxy_profile
+    target_kinds:
+      - crypto_validation_credentials
+    directed: true
+    transitive: false
+    description: "Security profile uses crypto validation credentials."
+    evidence_required: true
+
+  uses_document_cache_policy:
+    category: dependency
+    source_kinds:
+      - xml_manager
+    target_kinds:
+      - document_cache_policy
+    directed: true
+    transitive: false
+    description: "XML manager uses a document cache policy for cache handling."
+    evidence_required: true
+
+  uses_front_side_handler:
+    category: dependency
+    source_kinds:
+      - service
+    target_kinds:
+      - protocol_handler
+    directed: true
+    transitive: false
+    description: "Service uses a front-side protocol handler for inbound traffic."
+    evidence_required: true
+
+  uses_load_balancer_group:
+    category: dependency
+    source_kinds:
+      - service
+    target_kinds:
+      - load_balancer_group
+    directed: true
+    transitive: false
+    description: "Service uses a load balancer group for backend distribution."
+    evidence_required: true
+
+  uses_matching_rule:
+    category: dependency
+    source_kinds:
+      - processing_rule
+    target_kinds:
+      - matching_rule
+    directed: true
+    transitive: false
+    description: "Processing rule uses a matching rule to select or filter work."
+    evidence_required: true
+
+  uses_mq_queue_manager:
+    category: dependency
+    source_kinds:
+      - mq_source_protocol_handler
+    target_kinds:
+      - mq_queue_manager
+    directed: true
+    transitive: false
+    description: "MQ protocol handler uses a configured MQ queue manager."
+    evidence_required: true
+
+  uses_password_alias:
+    category: dependency
+    source_kinds:
+      - aaa_policy
+      - sftp_source_protocol_handler
+      - sql_data_source
+      - mq_queue_manager
+    target_kinds:
+      - password_alias
+    directed: true
+    transitive: false
+    description: "Object uses a password alias rather than a literal secret value."
+    evidence_required: true
+
+  uses_processing_policy:
+    category: dependency
+    source_kinds:
+      - service
+    target_kinds:
+      - style_policy
+    directed: true
+    transitive: false
+    description: "Service uses a DataPower processing policy for request or response handling."
+    evidence_required: true
+
+  uses_ssl_client_profile:
+    category: dependency
+    source_kinds:
+      - service
+      - user_agent
+      - b2b_gateway
+      - web_application_firewall
+    target_kinds:
+      - ssl_client_profile
+    directed: true
+    transitive: false
+    description: "Service or client object uses a TLS client profile."
+    evidence_required: true
+
+  uses_ssl_server_profile:
+    category: dependency
+    source_kinds:
+      - https_source_protocol_handler
+      - web_management
+      - xml_management
+    target_kinds:
+      - ssl_server_profile
+    directed: true
+    transitive: false
+    description: "Endpoint uses a TLS server profile for inbound SSL termination."
+    evidence_required: true
+
+  uses_user_agent:
+    category: dependency
+    source_kinds:
+      - xml_manager
+    target_kinds:
+      - user_agent
+    directed: true
+    transitive: false
+    description: "XML manager uses a configured user agent for outbound HTTP behavior."
+    evidence_required: true
+
+  uses_xml_manager:
+    category: dependency
+    source_kinds:
+      - service
+    target_kinds:
+      - xml_manager
+    directed: true
+    transitive: false
+    description: "Service uses an XML manager for XML processing behavior."
+    evidence_required: true
+
+  uses_sql_data_source:
+    category: dependency
+    source_kinds:
+      - processing_action
+      - datapower_service
+    target_kinds:
+      - sql_data_source
+    directed: true
+    transitive: false
+    description: "Processing action or service uses a DataPower SQL data source."
+    evidence_required: true
+
+  executes_sql_via_data_source:
+    category: execution
+    source_kinds:
+      - processing_action
+    target_kinds:
+      - sql_data_source
+    directed: true
+    transitive: false
+    description: "Processing action executes a SQL/ODBC operation through a configured SQL data source."
+    evidence_required: true
+
+validation:
+  fail_on_duplicate_relationship_type: true
+  fail_on_missing_description: true
+  fail_on_missing_category: true
+  fail_on_missing_evidence_requirement: true
+  fail_on_undefined_relationship_reference: true

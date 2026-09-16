@@ -1,0 +1,174 @@
+version: 1
+
+reference_types:
+
+  local_file:
+    category: filesystem_reference
+    target_kind: datapower_cfg
+    schemes:
+      - "local:///"
+    extensions: []
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Local filesystem reference to a DataPower file artifact."
+
+  certificate_file:
+    category: cryptographic_file
+    target_kind: pem_certificate_or_key_material
+    schemes:
+      - "cert:///"
+    extensions:
+      - ".pem"
+      - ".cer"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: certificate_public_material
+    evidence_required: true
+    description: "Reference to a certificate file stored in DataPower or a local certificate store."
+
+  public_certificate_file:
+    category: cryptographic_file
+    target_kind: pem_certificate_or_key_material
+    schemes:
+      - "pubcert:///"
+    extensions:
+      - ".pem"
+      - ".cer"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: certificate_public_material
+    evidence_required: true
+    description: "Reference to a public certificate file or certificate material."
+
+  configuration_file:
+    category: configuration_file_reference
+    target_kind: datapower_cfg
+    schemes:
+      - "config:///"
+    extensions:
+      - ".cfg"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to a DataPower configuration file in the configuration store."
+
+  store_file:
+    category: filesystem_reference
+    target_kind: datapower_cfg
+    schemes:
+      - "store:///"
+    extensions: []
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to a file stored in the DataPower store area."
+
+  temporary_file:
+    category: filesystem_reference
+    target_kind: datapower_cfg
+    schemes:
+      - "temporary:///"
+    extensions: []
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to a temporary DataPower file created for transient processing."
+
+  gatewayscript_file:
+    category: executable_source_file
+    target_kind: gateway_script_javascript
+    schemes: []
+    extensions:
+      - ".js"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to a GatewayScript JavaScript source file used by DataPower."
+
+  mq_client_configuration:
+    category: mq_configuration_file
+    target_kind: mq_client_ini
+    schemes: []
+    extensions:
+      - ".ini"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: security_configuration
+    evidence_required: true
+    description: "Reference to an MQ client configuration file that defines connection settings."
+
+  password_alias_reference:
+    category: credential_reference
+    target_kind: password_alias
+    schemes: []
+    extensions: []
+    resolvable_against:
+      - datapower_object_index
+    sensitivity_hint: credential_reference
+    evidence_required: true
+    description: "Reference to a password alias object used to resolve a secret without exposing the secret value."
+
+  private_key_file:
+    category: cryptographic_file
+    target_kind: pem_certificate_or_key_material
+    schemes: []
+    extensions:
+      - ".pem"
+      - ".key"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: private_key_material
+    evidence_required: true
+    description: "Reference to a file containing private key material."
+
+  wsdl_file:
+    category: service_definition_file
+    target_kind: wsdl_definition
+    schemes: []
+    extensions:
+      - ".wsdl"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to a WSDL service definition file."
+
+  xsd_file:
+    category: schema_definition_file
+    target_kind: xsd_schema
+    schemes: []
+    extensions:
+      - ".xsd"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to an XML schema definition file."
+
+  xslt_file:
+    category: executable_source_file
+    target_kind: xslt_stylesheet
+    schemes: []
+    extensions:
+      - ".xsl"
+      - ".xslt"
+    resolvable_against:
+      - file_inventory
+    sensitivity_hint: internal_configuration
+    evidence_required: true
+    description: "Reference to an XSLT stylesheet file used by DataPower to transform content."
+
+validation:
+  fail_on_duplicate_reference_type: true
+  fail_on_missing_description: true
+  fail_on_missing_category: true
+  fail_on_missing_target_kind: true
+  fail_on_undefined_sensitivity_hint: true
+  fail_on_undefined_file_type_target: true
+  fail_on_undefined_object_type_target: true

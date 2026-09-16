@@ -1,0 +1,1751 @@
+version: "1.1"
+
+taxonomy_name: datapower_objects
+
+description: >
+  Canonical taxonomy for IBM DataPower configuration objects discovered
+  from CLI .cfg exports. This taxonomy is the authoritative source for
+  DataPower object classification, parsing, dependency discovery,
+  test discovery, modernization analysis, environment comparison,
+  Codex retrieval, skills, plans, and graph construction.
+
+# ============================================================
+# EXTERNAL TAXONOMY SOURCES
+# ============================================================
+
+taxonomy_sources:
+
+  sensitivity:
+    path: taxonomy/sensitivity.yaml
+    key: sensitivity_levels
+
+  relationships:
+    path: taxonomy/relationship_types.yaml
+    key: relationships
+
+  references:
+    path: taxonomy/reference_types.yaml
+    key: reference_types
+
+# ============================================================
+# GLOBAL PARSER RULES
+# ============================================================
+
+parser_rules:
+
+  syntax:
+    type: datapower_cli_configuration
+
+  object_boundary:
+    strategy: cli_block
+    block_terminator: exit
+
+  preserve_source_evidence: true
+  preserve_raw_command: true
+  preserve_raw_object_name: true
+  preserve_parent_context: true
+  preserve_line_range: true
+  preserve_raw_block_sha256: true
+
+  conditional_directives:
+
+    recognized:
+      - "%if%"
+      - "%endif%"
+
+    treat_as_object: false
+    preserve_as_evidence: true
+
+  comments:
+
+    prefixes:
+      - "#"
+
+    treat_as_configuration: false
+    preserve_as_evidence: true
+
+  normalization:
+
+    command_case_sensitive: false
+    object_name_case_sensitive: true
+
+    trim_surrounding_whitespace: true
+    preserve_original_case: true
+    preserve_original_command: true
+    preserve_original_object_name: true
+
+  nesting:
+
+    track_parent_context: true
+    track_nested_exit_depth: true
+    preserve_context_stack: true
+
+# ============================================================
+# STANDARD FLAGS
+#
+# These flags describe indexing / graph behavior.
+# Sensitivity behavior comes from sensitivity.yaml.
+# ============================================================
+
+standard_flags:
+
+  defaults:
+
+    index_object: true
+    index_properties: true
+
+    searchable: true
+    graph_node: true
+
+    extract_properties: true
+    extract_references: true
+    extract_relationships: true
+    extract_endpoints: true
+
+    compare_across_environments: true
+
+    test_discovery_relevant: true
+    modernization_analysis_relevant: true
+
+    codegraph_candidate: false
+
+    retain_source_evidence: true
+    retain_raw_block_hash: true
+
+    resolve_references: true
+    resolve_relationships: true
+
+    taxonomy_review_required: false
+
+# ============================================================
+# INDEXING POLICIES
+# ============================================================
+
+indexing_policies:
+
+  full:
+
+    index_object: true
+    index_properties: true
+
+    raw_content_policy: full
+
+
+  normalized:
+
+    index_object: true
+    index_properties: true
+
+    raw_content_policy: normalized_only
+
+
+  metadata_only:
+
+    index_object: true
+    index_properties: false
+
+    raw_content_policy: metadata_only
+
+
+  redacted:
+
+    index_object: true
+    index_properties: true
+
+    raw_content_policy: redacted
+
+# ============================================================
+# OBJECT CATEGORIES
+# ============================================================
+
+categories:
+
+  domain_configuration:
+    description: >
+      DataPower domain-level configuration and domain behavior.
+
+  service:
+    description: >
+      Runtime DataPower gateway or proxy service.
+
+  processing:
+    description: >
+      Processing policy, rule, matching rule, or processing action.
+
+  protocol_handler:
+    description: >
+      Front-side or transport protocol handler.
+
+  routing:
+    description: >
+      Routing, rewriting, load balancing, destination, or backend control.
+
+  xml_processing:
+    description: >
+      XML manager, schema, resolver, transformation, or document processing.
+
+  api_configuration:
+    description: >
+      API and gateway-specific configuration.
+
+  security:
+    description: >
+      Authentication, authorization, AAA, identity, or security policy.
+
+  tls:
+    description: >
+      TLS client, TLS server, or SSL proxy configuration.
+
+  cryptographic_object:
+    description: >
+      Certificate, key, identification credential, validation credential,
+      or cryptographic profile.
+
+  credential_management:
+    description: >
+      Password aliases, secret aliases, and credential references.
+
+  network:
+    description: >
+      DNS, host aliases, network interfaces, routing, or network settings.
+
+  mq:
+    description: >
+      IBM MQ connectivity, queue manager, or MQ protocol configuration.
+
+  logging_monitoring:
+    description: >
+      Logging, monitoring, audit, probe, or event configuration.
+
+  user_agent:
+    description: >
+      DataPower user-agent and outbound connection behavior.
+
+  file_management:
+    description: >
+      Filesystem or storage-related configuration.
+
+  caching:
+    description: >
+      Document cache or caching policy configuration.
+
+  database:
+    description: >
+      SQL or database connectivity configuration.
+
+  b2b:
+    description: >
+      B2B gateways, partner profiles, or B2B-specific configuration.
+
+  web_services:
+    description: >
+      SOAP, WSDL, and web-service-specific configuration.
+
+  management:
+    description: >
+      DataPower management-plane services and configuration.
+
+  access_control:
+    description: >
+      ACL or access-control policy configuration.
+
+  operational:
+    description: >
+      Runtime or operational DataPower configuration.
+
+# ============================================================
+# OBJECT TYPES
+# ============================================================
+
+object_types:
+
+  # ==========================================================
+  # DOMAIN CONFIGURATION
+  # ==========================================================
+
+  domain_settings:
+
+    canonical_type: domain_settings
+    category: domain_configuration
+
+    match:
+      commands:
+        - domain-settings
+
+    naming:
+      mode: singleton
+      generated_name: domain-settings
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    flags:
+      test_discovery_relevant: false
+      modernization_analysis_relevant: true
+      extract_endpoints: false
+
+
+  # ==========================================================
+  # CREDENTIAL MANAGEMENT
+  # ==========================================================
+
+  password_alias:
+
+    canonical_type: password_alias
+    category: credential_management
+
+    match:
+      commands:
+        - password-alias
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: credential_reference
+    indexing_policy: redacted
+
+    sensitive_properties:
+      - summary
+      - password
+      - secret
+      - value
+
+    expected_relationships: []
+
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+      extract_endpoints: false
+
+
+  # ==========================================================
+  # CRYPTOGRAPHIC OBJECTS
+  # ==========================================================
+
+  crypto_certificate:
+
+    canonical_type: crypto_certificate
+    category: cryptographic_object
+
+    match:
+      commands:
+        - certificate
+
+      parent_context:
+        - crypto
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: certificate_public_material
+    indexing_policy: normalized
+
+    expected_references:
+      - certificate_file
+      - public_certificate_file
+
+    expected_relationships:
+      - references_certificate_file
+
+    flags:
+      extract_endpoints: false
+
+
+  crypto_key:
+
+    canonical_type: crypto_key
+    category: cryptographic_object
+
+    match:
+      commands:
+        - key
+
+      parent_context:
+        - crypto
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: private_key_material
+    indexing_policy: redacted
+
+    expected_references:
+      - private_key_file
+      - password_alias_reference
+
+    expected_relationships:
+      - references_private_key_file
+      - uses_password_alias
+
+    flags:
+      extract_endpoints: false
+
+
+  crypto_identification_credentials:
+
+    canonical_type: crypto_identification_credentials
+    category: cryptographic_object
+
+    match:
+      commands:
+        - idcred
+        - identification-credentials
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_key
+      - uses_crypto_certificate
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: false
+
+
+  crypto_validation_credentials:
+
+    canonical_type: crypto_validation_credentials
+    category: cryptographic_object
+
+    match:
+      commands:
+        - valcred
+        - validation-credentials
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_certificate
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: false
+
+
+  crypto_profile:
+
+    canonical_type: crypto_profile
+    category: cryptographic_object
+
+    match:
+      commands:
+        - crypto-profile
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_identification_credentials
+      - uses_crypto_validation_credentials
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: false
+
+
+  # ==========================================================
+  # TLS / SSL
+  # ==========================================================
+
+  ssl_client_profile:
+
+    canonical_type: ssl_client_profile
+    category: tls
+
+    match:
+      commands:
+        - ssl-client
+        - ssl-client-profile
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_identification_credentials
+      - uses_crypto_validation_credentials
+
+    expected_references: []
+
+
+  ssl_server_profile:
+
+    canonical_type: ssl_server_profile
+    category: tls
+
+    match:
+      commands:
+        - ssl-server
+        - ssl-server-profile
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_identification_credentials
+      - uses_crypto_validation_credentials
+
+    expected_references: []
+
+
+  ssl_proxy_profile:
+
+    canonical_type: ssl_proxy_profile
+    category: tls
+
+    match:
+      commands:
+        - ssl-proxy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_identification_credentials
+      - uses_crypto_validation_credentials
+
+    expected_references: []
+
+
+  # ==========================================================
+  # SERVICES
+  # ==========================================================
+
+  multi_protocol_gateway:
+
+    canonical_type: multi_protocol_gateway
+    category: service
+
+    match:
+      commands:
+        - mpgw
+        - multiprotocol-gateway
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_processing_policy
+      - uses_xml_manager
+      - uses_front_side_handler
+      - uses_ssl_client_profile
+      - uses_load_balancer_group
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+      - configuration_file
+
+    flags:
+      test_discovery_relevant: true
+      modernization_analysis_relevant: true
+      extract_endpoints: true
+
+
+  web_service_proxy:
+
+    canonical_type: web_service_proxy
+    category: web_services
+
+    match:
+      commands:
+        - wsgw
+        - web-service-proxy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - references_wsdl
+      - uses_processing_policy
+      - uses_xml_manager
+      - uses_front_side_handler
+      - uses_ssl_client_profile
+      - uses_load_balancer_group
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+      - wsdl_file
+      - configuration_file
+
+
+  xml_firewall:
+
+    canonical_type: xml_firewall
+    category: service
+
+    match:
+      commands:
+        - xmlfirewall
+        - xml-firewall
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_processing_policy
+      - uses_xml_manager
+      - uses_front_side_handler
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+
+
+  tcp_proxy:
+
+    canonical_type: tcp_proxy
+    category: service
+
+    match:
+      commands:
+        - tcp-proxy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - routes_to_backend
+
+    expected_references: []
+
+
+  web_application_firewall:
+
+    canonical_type: web_application_firewall
+    category: service
+
+    match:
+      commands:
+        - web-app-firewall
+        - web-application-firewall
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_processing_policy
+      - uses_front_side_handler
+      - uses_ssl_client_profile
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+
+
+  # ==========================================================
+  # PROCESSING
+  # ==========================================================
+
+  style_policy:
+
+    canonical_type: style_policy
+    category: processing
+
+    match:
+      commands:
+        - stylepolicy
+        - style-policy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - contains_processing_rule
+
+    expected_references: []
+
+
+  processing_rule:
+
+    canonical_type: processing_rule
+    category: processing
+
+    match:
+      commands:
+        - stylepolicy-rule
+        - processing-rule
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_matching_rule
+      - contains_processing_action
+
+    expected_references: []
+
+
+  matching_rule:
+
+    canonical_type: matching_rule
+    category: processing
+
+    match:
+      commands:
+        - matching
+        - matching-rule
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+
+    expected_references: []
+
+
+  style_policy_action:
+
+    canonical_type: style_policy_action
+    category: processing
+
+    match:
+      commands:
+        - stylepolicy-action
+        - processing-action
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_references:
+      - local_file
+      - xslt_file
+      - gatewayscript_file
+
+    expected_relationships:
+      - executes_xslt
+      - executes_gatewayscript
+      - references_file
+      - routes_to_backend
+      - uses_sql_data_source
+      - executes_sql_via_data_source
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # XML PROCESSING
+  # ==========================================================
+
+  xml_manager:
+
+    canonical_type: xml_manager
+    category: xml_processing
+
+    match:
+      commands:
+        - xml-manager
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_user_agent
+      - uses_document_cache_policy
+
+    expected_references:
+      - local_file
+      - xsd_file
+
+
+  schema_exception_map:
+
+    canonical_type: schema_exception_map
+    category: xml_processing
+
+    match:
+      commands:
+        - schema-exception-map
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - references_schema
+
+    expected_references:
+      - xsd_file
+      - local_file
+
+
+  document_cache_policy:
+
+    canonical_type: document_cache_policy
+    category: caching
+
+    match:
+      commands:
+        - document-cache-policy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+
+  # ==========================================================
+  # USER AGENT
+  # ==========================================================
+
+  user_agent:
+
+    canonical_type: user_agent
+    category: user_agent
+
+    match:
+      commands:
+        - user-agent
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_ssl_client_profile
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # ROUTING
+  # ==========================================================
+
+  load_balancer_group:
+
+    canonical_type: load_balancer_group
+    category: routing
+
+    match:
+      commands:
+        - loadbalancer-group
+        - load-balancer-group
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - contains_backend_member
+      - routes_to_backend
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  url_rewrite_policy:
+
+    canonical_type: url_rewrite_policy
+    category: routing
+
+    match:
+      commands:
+        - urlrewrite
+        - url-rewrite-policy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - rewrites_to
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+
+
+  url_map:
+
+    canonical_type: url_map
+    category: routing
+
+    match:
+      commands:
+        - urlmap
+        - url-map
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - routes_to_backend
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # PROTOCOL HANDLERS
+  # ==========================================================
+
+  http_source_protocol_handler:
+
+    canonical_type: http_source_protocol_handler
+    category: protocol_handler
+
+    match:
+      commands:
+        - http-source
+        - http-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  https_source_protocol_handler:
+
+    canonical_type: https_source_protocol_handler
+    category: protocol_handler
+
+    match:
+      commands:
+        - https-source
+        - https-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_ssl_server_profile
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  mq_source_protocol_handler:
+
+    canonical_type: mq_source_protocol_handler
+    category: mq
+
+    match:
+      commands:
+        - mq-source
+        - mq-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_mq_queue_manager
+
+    expected_references:
+      - mq_client_configuration
+
+
+  ftp_source_protocol_handler:
+
+    canonical_type: ftp_source_protocol_handler
+    category: protocol_handler
+
+    match:
+      commands:
+        - ftp-source
+        - ftp-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  sftp_source_protocol_handler:
+
+    canonical_type: sftp_source_protocol_handler
+    category: protocol_handler
+
+    match:
+      commands:
+        - sftp-source
+        - sftp-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_password_alias
+      - uses_crypto_key
+
+    expected_references:
+      - password_alias_reference
+      - private_key_file
+
+    flags:
+      extract_endpoints: true
+
+
+  tcp_source_protocol_handler:
+
+    canonical_type: tcp_source_protocol_handler
+    category: protocol_handler
+
+    match:
+      commands:
+        - tcp-source
+        - tcp-source-protocol-handler
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # MQ
+  # ==========================================================
+
+  mq_queue_manager:
+
+    canonical_type: mq_queue_manager
+    category: mq
+
+    match:
+      commands:
+        - mq-qm
+        - mq-queue-manager
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_references:
+      - password_alias_reference
+      - mq_client_configuration
+
+    expected_relationships:
+      - uses_password_alias
+      - references_mq_client_configuration
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # SECURITY / AAA
+  # ==========================================================
+
+  aaa_policy:
+
+    canonical_type: aaa_policy
+    category: security
+
+    match:
+      commands:
+        - aaa
+        - aaa-policy
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_ssl_client_profile
+      - uses_password_alias
+
+    expected_references:
+      - password_alias_reference
+      - local_file
+
+
+  access_control_list:
+
+    canonical_type: access_control_list
+    category: access_control
+
+    match:
+      commands:
+        - access-control-list
+        - acl
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+
+  # ==========================================================
+  # DATABASE
+  # ==========================================================
+
+  sql_data_source:
+
+    canonical_type: sql_data_source
+    category: database
+
+    match:
+      commands:
+        - sql-data-source
+        - sql-source
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: credential_reference
+    indexing_policy: redacted
+
+    expected_references:
+      - password_alias_reference
+
+    expected_relationships:
+      - uses_password_alias
+      - routes_to_database
+
+    flags:
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # B2B
+  # ==========================================================
+
+  b2b_gateway:
+
+    canonical_type: b2b_gateway
+    category: b2b
+
+    match:
+      commands:
+        - b2b-gateway
+        - b2bgw
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_b2b_profile
+      - uses_ssl_client_profile
+      - routes_to_backend
+
+    expected_references:
+      - local_file
+
+
+  b2b_profile:
+
+    canonical_type: b2b_profile
+    category: b2b
+
+    match:
+      commands:
+        - b2b-profile
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_crypto_identification_credentials
+      - uses_crypto_validation_credentials
+
+    expected_references: []
+
+
+  # ==========================================================
+  # LOGGING / MONITORING
+  # ==========================================================
+
+  log_target:
+
+    canonical_type: log_target
+    category: logging_monitoring
+
+    match:
+      commands:
+        - logging
+        - log-target
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - routes_logs_to
+
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+      extract_endpoints: true
+
+
+  log_label:
+
+    canonical_type: log_label
+    category: logging_monitoring
+
+    match:
+      commands:
+        - log-label
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+
+
+  # ==========================================================
+  # MANAGEMENT
+  # ==========================================================
+
+  web_management:
+
+    canonical_type: web_management
+    category: management
+
+    match:
+      commands:
+        - web-mgmt
+        - web-management
+
+    naming:
+      mode: singleton
+      generated_name: web-management
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_ssl_server_profile
+
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+      extract_endpoints: true
+
+
+  xml_management:
+
+    canonical_type: xml_management
+    category: management
+
+    match:
+      commands:
+        - xml-mgmt
+        - xml-management
+
+    naming:
+      mode: singleton
+      generated_name: xml-management
+
+    sensitivity: security_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - uses_ssl_server_profile
+
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+      extract_endpoints: true
+
+
+  # ==========================================================
+  # NETWORK
+  # ==========================================================
+
+  dns_settings:
+
+    canonical_type: dns_settings
+    category: network
+
+    match:
+      commands:
+        - dns
+
+    naming:
+      mode: singleton
+      generated_name: dns-settings
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships: []
+    expected_references: []
+
+    flags:
+      test_discovery_relevant: false
+      extract_endpoints: true
+
+
+  host_alias:
+
+    canonical_type: host_alias
+    category: network
+
+    match:
+      commands:
+        - host-alias
+
+    naming:
+      mode: quoted_argument
+
+    sensitivity: internal_configuration
+    indexing_policy: normalized
+
+    expected_relationships:
+      - resolves_to
+
+    expected_references: []
+
+    flags:
+      extract_endpoints: true
+
+
+# ============================================================
+# UNCLASSIFIED OBJECT HANDLING
+#
+# These are precise technical statuses.
+# Never classify an object as:
+# unknown / other / misc / various / generic.
+# ============================================================
+
+unclassified_object_handling:
+
+  create_index_record: true
+  create_graph_node: true
+
+  preserve:
+
+    - environment
+    - source_file
+
+    - raw_command
+    - raw_object_name
+    - raw_parent_context
+
+    - line_start
+    - line_end
+
+    - raw_block_sha256
+
+    - discovered_properties
+    - discovered_references
+    - discovered_endpoints
+
+  prohibited_labels:
+
+    - unknown
+    - other
+    - others
+    - misc
+    - miscellaneous
+    - many
+    - different
+    - various
+    - generic
+
+  statuses:
+
+    unclassified_due_to_taxonomy_gap:
+
+      description: >
+        Parser recognized a valid configuration object block,
+        but its raw DataPower command is not currently defined
+        in datapower_objects.yaml.
+
+      actions:
+        - preserve_raw_command
+        - preserve_raw_object_name
+        - preserve_source_evidence
+        - create_taxonomy_review_candidate
+
+
+    unclassified_due_to_parent_context_gap:
+
+      description: >
+        Command exists in the taxonomy but the observed parent
+        context does not match any currently defined context.
+
+      actions:
+        - preserve_raw_command
+        - preserve_raw_parent_context
+        - preserve_source_evidence
+        - create_taxonomy_review_candidate
+
+
+    unclassified_due_to_parser_gap:
+
+      description: >
+        Configuration syntax appears to contain an object,
+        but the parser cannot reliably determine the complete
+        object block or nesting boundaries.
+
+      actions:
+        - preserve_raw_lines
+        - preserve_source_evidence
+        - create_parser_review_candidate
+
+
+    unclassified_due_to_ambiguous_command:
+
+      description: >
+        Raw command matches more than one canonical object type
+        and the available context is insufficient to resolve
+        the canonical classification safely.
+
+      actions:
+        - preserve_all_candidate_types
+        - preserve_raw_command
+        - preserve_parent_context
+        - preserve_source_evidence
+        - create_taxonomy_review_candidate
+
+
+    unclassified_due_to_missing_object_name:
+
+      description: >
+        Object block was detected but no reliable object name
+        could be extracted using the configured naming rule.
+
+      actions:
+        - preserve_raw_command
+        - preserve_source_evidence
+        - generate_temporary_evidence_id
+
+
+# ============================================================
+# CLASSIFICATION OUTPUT CONTRACT
+# ============================================================
+
+classification_output:
+
+  required_fields:
+
+    - object_id
+
+    - environment
+    - source_file
+
+    - raw_command
+    - raw_object_name
+    - raw_parent_context
+
+    - canonical_type
+    - category
+
+    - classification_status
+    - classification_reason
+    - classification_rule
+
+    - line_start
+    - line_end
+
+    - sensitivity_level
+
+    - indexing_policy
+
+    - index_object
+    - index_properties
+
+    - searchable
+    - graph_node
+
+    - extract_properties
+    - extract_references
+    - extract_relationships
+    - extract_endpoints
+
+    - resolve_references
+    - resolve_relationships
+
+    - compare_across_environments
+
+    - test_discovery_relevant
+    - modernization_analysis_relevant
+
+    - codegraph_candidate
+
+    - retain_source_evidence
+    - retain_raw_block_hash
+
+    - raw_block_sha256
+
+
+  classified_status:
+    value: classified
+
+
+  stable_object_id:
+
+    format: >
+      obj:{environment}:{canonical_type}:{normalized_object_name}
+
+
+  unclassified_stable_object_id:
+
+    format: >
+      obj:{environment}:{classification_status}:{raw_command}:{normalized_object_name}
+
+# ============================================================
+# REFERENCE RESOLUTION RULES
+# ============================================================
+
+reference_resolution:
+
+  require_source_evidence: true
+
+  preserve_raw_reference: true
+  preserve_normalized_reference: true
+
+  preserve_reference_scheme: true
+
+  resolve_against_file_inventory: true
+
+  unresolved_reference_behavior:
+
+    create_reference_record: true
+
+    classification_status:
+      unresolved_due_to_missing_target
+
+    preserve:
+      - source_object_id
+      - raw_reference
+      - reference_type
+      - source_file
+      - source_line
+
+
+# ============================================================
+# RELATIONSHIP RESOLUTION RULES
+# ============================================================
+
+relationship_resolution:
+
+  require_source_evidence: true
+
+  infer_from_name_only: false
+
+  preserve_property_name: true
+  preserve_property_value: true
+
+  preserve_source_file: true
+  preserve_source_line: true
+
+  unresolved_target_behavior:
+
+    create_relationship_record: true
+
+    classification_status:
+      unresolved_due_to_missing_target
+
+  ambiguous_target_behavior:
+
+    create_relationship_record: true
+
+    classification_status:
+      unresolved_due_to_ambiguous_target
+
+    preserve_all_candidates: true
+
+
+# ============================================================
+# TAXONOMY REVIEW OUTPUT
+# ============================================================
+
+taxonomy_review:
+
+  enabled: true
+
+  generate_candidates_for:
+
+    - unclassified_due_to_taxonomy_gap
+    - unclassified_due_to_parent_context_gap
+    - unclassified_due_to_parser_gap
+    - unclassified_due_to_ambiguous_command
+    - unclassified_due_to_missing_object_name
+
+  group_candidates_by:
+
+    - raw_command
+    - raw_parent_context
+
+  preserve_occurrence_count: true
+
+  preserve_example_evidence: true
+
+  preserve_all_source_locations: true
+
+
+# ============================================================
+# VALIDATION RULES
+# ============================================================
+
+validation:
+
+  fail_on_duplicate_canonical_type: true
+
+  fail_on_duplicate_match_rule_with_same_context: true
+
+  fail_on_missing_category: true
+  fail_on_undefined_category: true
+
+  fail_on_missing_sensitivity: true
+
+  fail_on_undefined_external_sensitivity_level: true
+
+  sensitivity_taxonomy_source:
+    path: taxonomy/sensitivity.yaml
+    key: sensitivity_levels
+
+  fail_on_missing_indexing_policy: true
+  fail_on_undefined_indexing_policy: true
+
+  fail_on_undefined_reference_type: true
+
+  reference_taxonomy_source:
+    path: taxonomy/reference_types.yaml
+    key: reference_types
+
+  fail_on_undefined_relationship_type: true
+
+  relationship_taxonomy_source:
+    path: taxonomy/relationship_types.yaml
+    key: relationships
+
+  fail_on_prohibited_classification_label: true
+
+  allow_unclassified_objects: true
+
+  require_unclassified_reason: true
+  require_source_evidence_for_unclassified: true
+
+  require_source_evidence_for_relationships: true
+  require_source_evidence_for_references: true
+
+  prohibit_relationship_inference_from_object_name_only: true
