@@ -1,2 +1,5 @@
 /export-stg-uat/
+/index/
 DS_Store
+__pycache__/
+*.py[cod]

@@ -428,6 +428,34 @@ file_types:
 
       codegraph_candidate: false
 
+  plain_text_artifact:
+    extensions:
+      - ".txt"
+
+    description: "Plain text artifact used by DataPower configuration, transformation, test, or integration logic"
+
+    agent_indexing: selected_content
+
+    flags:
+      requires_content_sensitivity_scan: true
+      may_contain_secret_value: true
+      require_redaction_if_detected: true
+
+      allow_raw_content_in_search_index_before_scan: false
+      allow_raw_content_in_agent_context_before_scan: false
+      allow_raw_content_in_reports_before_scan: false
+
+      allow_sanitized_content_in_search_index: true
+      allow_sanitized_content_in_agent_context: true
+      allow_sanitized_content_in_reports: true
+
+      extract_references: true
+      extract_endpoints: true
+
+      test_discovery_relevant: true
+      modernization_analysis_relevant: true
+
+      codegraph_candidate: false
 
 # ============================================================
 # UNCLASSIFIED FILE HANDLING

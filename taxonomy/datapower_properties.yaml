@@ -1,0 +1,479 @@
+version: '1.0'
+taxonomy_name: datapower_properties
+status: v1_evidence_driven
+description: 'Semantic property grammar for IBM DataPower configuration objects. This taxonomy explains what a property means
+  in the context of a source object type. It does not resolve targets itself and does not infer relationships from names.
+
+  '
+design_principles:
+  context_required: true
+  properties_are_not_objects: true
+  relationships_must_be_property_evidence_backed: true
+  preserve_raw_property_value: true
+  allow_multiple_rules_for_same_token_by_source_type: true
+  no_name_based_inference: true
+property_kinds:
+  object_reference:
+    description: Reference to another DataPower configuration object.
+  file_reference:
+    description: Reference to a DataPower filesystem artifact.
+  endpoint:
+    description: Network/resource endpoint value.
+  scalar:
+    description: Scalar configuration value with no graph edge.
+  compound_reference:
+    description: One property encodes multiple semantic references.
+  attached_subconfiguration:
+    description: Configuration attached to an owning object.
+  opaque:
+    description: Known property retained without semantic graph behavior.
+cardinality_values:
+- zero_or_one
+- exactly_one
+- zero_or_many
+- one_or_many
+property_rules:
+  multi_protocol_gateway:
+    stylepolicy:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: style_policy
+      reference_type: datapower_object_reference
+      relationship_type: uses_processing_policy
+      resolution_strategy: same_domain_exact_name
+    xml-manager:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: xml_manager
+      reference_type: datapower_object_reference
+      relationship_type: uses_xml_manager
+      resolution_strategy: same_domain_exact_name
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    front-protocol:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type_set:
+      - http_source_protocol_handler
+      - https_source_protocol_handler
+      - mq_source_protocol_handler
+      - raw_source_protocol_handler
+      reference_type: datapower_object_reference
+      relationship_type: uses_front_side_handler
+      resolution_strategy: same_domain_exact_name_multi_type
+    backend-url:
+      property_kind: endpoint
+      cardinality: zero_or_one
+      reference_type: backend_endpoint
+      relationship_type: routes_to_backend
+      endpoint_parser: uri
+    user-agent:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: user_agent
+      reference_type: datapower_object_reference
+      relationship_type: uses_user_agent
+      resolution_strategy: same_domain_exact_name
+  style_policy:
+    match:
+      property_kind: compound_reference
+      cardinality: zero_or_many
+      arguments:
+      - position: 1
+        semantic_role: matching_rule
+        target_type: matching_rule
+        reference_type: datapower_object_reference
+        relationship_type: uses_matching_rule
+        resolution_strategy: same_domain_exact_name
+      - position: 2
+        semantic_role: processing_rule
+        target_type: processing_rule
+        reference_type: datapower_object_reference
+        relationship_type: contains_processing_rule
+        resolution_strategy: same_domain_exact_name
+    rule:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: processing_rule
+      reference_type: datapower_object_reference
+      relationship_type: contains_processing_rule
+      resolution_strategy: same_domain_exact_name
+    request-rule:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: processing_rule
+      reference_type: datapower_object_reference
+      relationship_type: contains_processing_rule
+      resolution_strategy: same_domain_exact_name
+    response-rule:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: processing_rule
+      reference_type: datapower_object_reference
+      relationship_type: contains_processing_rule
+      resolution_strategy: same_domain_exact_name
+    error-rule:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: processing_rule
+      reference_type: datapower_object_reference
+      relationship_type: contains_processing_rule
+      resolution_strategy: same_domain_exact_name
+    filter:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+    xsldefault:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+    xquerydefault:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: local_file
+      relationship_type: references_file
+  processing_rule:
+    action:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: processing_action
+      reference_type: datapower_object_reference
+      relationship_type: contains_processing_action
+      resolution_strategy: same_domain_exact_name
+    match:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: matching_rule
+      reference_type: datapower_object_reference
+      relationship_type: uses_matching_rule
+      resolution_strategy: same_domain_exact_name
+  processing_action:
+    type:
+      property_kind: scalar
+      cardinality: zero_or_one
+    input:
+      property_kind: scalar
+      cardinality: zero_or_one
+    output:
+      property_kind: scalar
+      cardinality: zero_or_one
+    transform:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+    xsl:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+    gatewayscript-location:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: gatewayscript_file
+      relationship_type: executes_gatewayscript
+    aaa-policy:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: aaa_policy
+      reference_type: datapower_object_reference
+      relationship_type: uses_aaa_policy
+      resolution_strategy: same_domain_exact_name
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    sql-source:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: sql_data_source
+      reference_type: datapower_object_reference
+      relationship_type: uses_sql_data_source
+      resolution_strategy: same_domain_exact_name
+    url:
+      property_kind: endpoint
+      cardinality: zero_or_one
+      reference_type: remote_resource_endpoint
+      relationship_type: routes_to_backend
+      endpoint_parser: uri
+    destination:
+      property_kind: endpoint
+      cardinality: zero_or_one
+      reference_type: remote_resource_endpoint
+      relationship_type: routes_to_backend
+      endpoint_parser: uri
+  xml_manager:
+    user-agent:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: user_agent
+      reference_type: datapower_object_reference
+      relationship_type: uses_user_agent
+      resolution_strategy: same_domain_exact_name
+    loadbalancer-group:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: load_balancer_group
+      reference_type: datapower_object_reference
+      relationship_type: uses_load_balancer_group
+      resolution_strategy: same_domain_exact_name
+    documentcache:
+      property_kind: attached_subconfiguration
+      cardinality: zero_or_one
+      owner_type: xml_manager
+    schema:
+      property_kind: file_reference
+      cardinality: zero_or_many
+      reference_type: xsd_file
+      relationship_type: references_schema
+    wsdl:
+      property_kind: file_reference
+      cardinality: zero_or_many
+      reference_type: wsdl_file
+      relationship_type: references_wsdl
+  tls_client_profile:
+    idcred:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: crypto_identification_credentials
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_identification_credentials
+      resolution_strategy: same_domain_exact_name
+    valcred:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: crypto_validation_credentials
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_validation_credentials
+      resolution_strategy: same_domain_exact_name
+  tls_server_profile:
+    idcred:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: crypto_identification_credentials
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_identification_credentials
+      resolution_strategy: same_domain_exact_name
+    valcred:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: crypto_validation_credentials
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_validation_credentials
+      resolution_strategy: same_domain_exact_name
+  crypto_identification_credentials:
+    key:
+      property_kind: object_reference
+      cardinality: exactly_one
+      target_type: crypto_key
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_key
+      resolution_strategy: same_domain_exact_name
+    certificate:
+      property_kind: object_reference
+      cardinality: exactly_one
+      target_type: crypto_certificate
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_certificate
+      resolution_strategy: same_domain_exact_name
+    ca:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: crypto_certificate
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_certificate
+      resolution_strategy: same_domain_exact_name
+  crypto_validation_credentials:
+    certificate:
+      property_kind: object_reference
+      cardinality: zero_or_many
+      target_type: crypto_certificate
+      reference_type: datapower_object_reference
+      relationship_type: uses_crypto_certificate
+      resolution_strategy: same_domain_exact_name
+  crypto_certificate:
+    file-name:
+      property_kind: file_reference
+      cardinality: exactly_one
+      reference_type: public_certificate_file
+      relationship_type: references_certificate_file
+  crypto_key:
+    file-name:
+      property_kind: file_reference
+      cardinality: exactly_one
+      reference_type: private_key_file
+      relationship_type: references_private_key_file
+  user_agent:
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+  mq_queue_manager_legacy:
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    client-config:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: mq_client_configuration
+      relationship_type: references_mq_client_configuration
+    queue-manager:
+      property_kind: scalar
+      cardinality: zero_or_one
+    host:
+      property_kind: endpoint
+      cardinality: zero_or_many
+      reference_type: mq_endpoint
+      relationship_type: routes_to_mq
+      endpoint_parser: host_port
+  mq_v9_queue_manager:
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    client-config:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: mq_client_configuration
+      relationship_type: references_mq_client_configuration
+    host:
+      property_kind: endpoint
+      cardinality: zero_or_many
+      reference_type: mq_endpoint
+      relationship_type: routes_to_mq
+      endpoint_parser: host_port
+  sql_data_source:
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    datasource:
+      property_kind: scalar
+      cardinality: zero_or_one
+  http_source_protocol_handler:
+    ssl-server:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_server_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_server_profile
+      resolution_strategy: same_domain_exact_name
+  https_source_protocol_handler:
+    ssl-server:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_server_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_server_profile
+      resolution_strategy: same_domain_exact_name
+  web_service_proxy:
+    xml-manager:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: xml_manager
+      reference_type: datapower_object_reference
+      relationship_type: uses_xml_manager
+      resolution_strategy: same_domain_exact_name
+    ssl-client:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: tls_client_profile
+      reference_type: datapower_object_reference
+      relationship_type: uses_tls_client_profile
+      resolution_strategy: same_domain_exact_name
+    stylepolicy:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: web_service_proxy_processing_policy
+      reference_type: datapower_object_reference
+      relationship_type: uses_processing_policy
+      resolution_strategy: same_domain_exact_name
+    endpoint-rewrite-policy:
+      property_kind: object_reference
+      cardinality: zero_or_one
+      target_type: web_service_proxy_endpoint_rewrite
+      reference_type: datapower_object_reference
+      relationship_type: uses_endpoint_rewrite_policy
+      resolution_strategy: same_domain_exact_name
+  web_service_proxy_processing_policy:
+    match:
+      property_kind: compound_reference
+      cardinality: zero_or_many
+      arguments:
+      - position: 3
+        semantic_role: matching_rule
+        target_type: matching_rule
+        reference_type: datapower_object_reference
+        relationship_type: uses_matching_rule
+        resolution_strategy: same_domain_exact_name
+      - position: 4
+        semantic_role: processing_rule
+        target_type: web_service_proxy_processing_rule
+        reference_type: datapower_object_reference
+        relationship_type: contains_processing_rule
+        resolution_strategy: same_domain_exact_name
+    filter:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+      resolution_strategy: file_inventory_lookup
+    xsldefault:
+      property_kind: file_reference
+      cardinality: zero_or_one
+      reference_type: xslt_file
+      relationship_type: executes_xslt
+      resolution_strategy: file_inventory_lookup
+  web_service_proxy_endpoint_rewrite:
+    listener-rule:
+      property_kind: compound_reference
+      cardinality: one_or_many
+      arguments:
+      - position: 6
+        semantic_role: front_side_handler
+        target_type_set:
+        - http_source_protocol_handler
+        - https_source_protocol_handler
+        reference_type: datapower_object_reference
+        relationship_type: uses_front_side_handler
+        resolution_strategy: same_domain_exact_name_multi_type
+    remote-endpoint-protocol:
+      property_kind: scalar
+      semantic_role: remote_protocol
+    remote-endpoint-hostname:
+      property_kind: scalar
+      semantic_role: remote_host
+    remote-endpoint-port:
+      property_kind: scalar
+      semantic_role: remote_port
+    remote-endpoint-uri:
+      property_kind: scalar
+      semantic_role: remote_uri
+unmapped_property_policy:
+  preserve: true
+  emit_as_reference: false
+  emit_as_relationship: false
+  classification_status: unmapped_due_to_property_taxonomy_gap

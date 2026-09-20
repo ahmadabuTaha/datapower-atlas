@@ -4,8 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Iterable, List, Set, Tuple
+from typing import Any, Dict, List, Set
 
 from taxonomy_loader import (
     DuplicateKeyError,
@@ -28,18 +27,6 @@ PROHIBITED_LABELS = {
     "generic",
 }
 
-FILE_SCAN_REQUIRED = {
-    "datapower_cfg",
-    "xslt_stylesheet",
-    "gateway_script_javascript",
-    "wsdl_definition",
-    "xsd_schema",
-    "xml_document",
-    "json_document",
-    "mq_client_ini",
-    "ini_configuration",
-}
-
 
 @dataclass
 class ValidationReport:
@@ -58,60 +45,56 @@ class ValidationReport:
         return not self.errors
 
 
-def _effective_flags(defaults: Dict[str, Any], *overrides: Dict[str, Any]) -> Dict[str, Any]:
-    result = dict(defaults)
-    for override in overrides:
-        result.update(override or {})
-    return result
-
-
-def _find_prohibited_labels(value: Any, path: str = "") -> Iterable[str]:
-    if isinstance(value, dict):
-        for k, v in value.items():
-            key_norm = str(k).strip().lower()
-            if key_norm in PROHIBITED_LABELS:
-                yield f"{path}.{k}" if path else str(k)
-            yield from _find_prohibited_labels(v, f"{path}.{k}" if path else str(k))
-    elif isinstance(value, list):
-        for i, item in enumerate(value):
-            yield from _find_prohibited_labels(item, f"{path}[{i}]")
-    elif isinstance(value, str):
-        if value.strip().lower() in PROHIBITED_LABELS:
-            yield path
-
-
 def validate(bundle: TaxonomyBundle) -> ValidationReport:
     r = ValidationReport()
 
-    objects = get_mapping(bundle.datapower_objects, "object_types", "datapower_objects")
-    categories = get_mapping(bundle.datapower_objects, "categories", "datapower_objects")
-    indexing_policies = get_mapping(bundle.datapower_objects, "indexing_policies", "datapower_objects")
-    sensitivity_levels = get_mapping(bundle.sensitivity, "sensitivity_levels", "sensitivity")
-    references = get_mapping(bundle.reference_types, "reference_types", "reference_types")
-    relationships = get_mapping(bundle.relationship_types, "relationships", "relationship_types")
-    file_types = get_mapping(bundle.file_types, "file_types", "file_types")
-    agent_modes = get_mapping(bundle.file_types, "agent_indexing_modes", "file_types")
-    file_defaults = get_mapping(
-        get_mapping(bundle.file_types, "standard_flags", "file_types"),
-        "defaults",
-        "file_types.standard_flags",
+    objects = get_mapping(
+        bundle.datapower_objects, "object_types", "datapower_objects"
+    )
+    property_rules = get_mapping(
+        bundle.datapower_properties,
+        "property_rules",
+        "datapower_properties",
+    )
+    references = get_mapping(
+        bundle.reference_types,
+        "reference_types",
+        "reference_types",
+    )
+    relationships = get_mapping(
+        bundle.relationship_types,
+        "relationship_types",
+        "relationship_types",
+    )
+    endpoints = get_mapping(
+        bundle.endpoint_types,
+        "endpoint_types",
+        "endpoint_types",
+    )
+    cross_mappings = bundle.cross_taxonomy.get("mappings", [])
+    resolution_strategies = get_mapping(
+        bundle.cross_taxonomy,
+        "resolution_strategies",
+        "cross_taxonomy",
+    )
+    file_types = get_mapping(
+        bundle.file_types,
+        "file_types",
+        "file_types",
+    )
+    sensitivity_levels = get_mapping(
+        bundle.sensitivity,
+        "sensitivity_levels",
+        "sensitivity",
     )
 
-    r.metrics.update({
-        "datapower_object_types": len(objects),
-        "relationship_types": len(relationships),
-        "reference_types": len(references),
-        "sensitivity_levels": len(sensitivity_levels),
-        "file_type_buckets": len(file_types),
-    })
+    if not isinstance(cross_mappings, list):
+        r.error("cross_taxonomy.mappings must be a list")
+        cross_mappings = []
 
-    # --------------------------------------------------------
-    # DataPower object cross references
-    # --------------------------------------------------------
-    canonical_seen: Dict[str, str] = {}
-
-    for object_key, spec in objects.items():
-        p = f"datapower_objects.object_types.{object_key}"
+    canonical_types: Dict[str, str] = {}
+    for key, spec in objects.items():
+        p = f"datapower_objects.object_types.{key}"
         if not isinstance(spec, dict):
             r.error(f"{p}: object definition must be a mapping")
             continue
@@ -119,302 +102,319 @@ def validate(bundle: TaxonomyBundle) -> ValidationReport:
         canonical = spec.get("canonical_type")
         if not canonical:
             r.error(f"{p}: missing canonical_type")
-        elif canonical in canonical_seen:
+            continue
+
+        if canonical in canonical_types:
             r.error(
                 f"{p}: duplicate canonical_type {canonical!r}; "
-                f"already used by {canonical_seen[canonical]}"
+                f"already used by {canonical_types[canonical]}"
             )
         else:
-            canonical_seen[canonical] = object_key
+            canonical_types[canonical] = key
 
-        category = spec.get("category")
-        if category not in categories:
-            r.error(f"{p}.category: undefined category {category!r}")
+    object_types: Set[str] = set(canonical_types)
 
-        sensitivity = spec.get("sensitivity")
-        if sensitivity not in sensitivity_levels:
-            r.error(f"{p}.sensitivity: undefined sensitivity level {sensitivity!r}")
+    r.metrics.update({
+        "datapower_object_types": len(object_types),
+        "property_source_types": len(property_rules),
+        "reference_types": len(references),
+        "relationship_types": len(relationships),
+        "endpoint_types": len(endpoints),
+        "cross_mappings": len(cross_mappings),
+        "file_type_buckets": len(file_types),
+        "sensitivity_levels": len(sensitivity_levels),
+    })
 
-        indexing = spec.get("indexing_policy")
-        if indexing not in indexing_policies:
-            r.error(f"{p}.indexing_policy: undefined indexing policy {indexing!r}")
-
-        for rel in as_list(spec.get("expected_relationships")):
-            if rel not in relationships:
-                r.error(f"{p}.expected_relationships: undefined relationship {rel!r}")
-
-        for ref in as_list(spec.get("expected_references")):
-            if ref not in references:
-                r.error(f"{p}.expected_references: undefined reference type {ref!r}")
-
-    # --------------------------------------------------------
-    # Reference taxonomy
-    # --------------------------------------------------------
-    for ref_name, spec in references.items():
-        p = f"reference_types.reference_types.{ref_name}"
+    # ------------------------------------------------------------------
+    # Object taxonomy
+    # ------------------------------------------------------------------
+    for key, spec in objects.items():
         if not isinstance(spec, dict):
-            r.error(f"{p}: reference definition must be a mapping")
             continue
+        p = f"datapower_objects.object_types.{key}"
 
-        hint = spec.get("sensitivity_hint")
-        if hint is not None and hint not in sensitivity_levels:
-            r.error(f"{p}.sensitivity_hint: undefined sensitivity level {hint!r}")
+        canonical = spec.get("canonical_type")
+        if isinstance(canonical, str) and canonical.lower() in PROHIBITED_LABELS:
+            r.error(f"{p}.canonical_type: prohibited label {canonical!r}")
 
-        target = spec.get("target_kind")
-        if not target:
-            r.error(f"{p}.target_kind: missing target kind")
-        elif target not in file_types and target not in objects:
-            # Some target kinds intentionally represent runtime/semantic nodes.
-            # These remain warnings until a dedicated semantic-kind registry exists.
-            r.warn(
-                f"{p}.target_kind: {target!r} is not a file type or DataPower object type; "
-                "treat as semantic/runtime kind until semantic-kind registry is added"
-            )
+        kind = spec.get("recognition_kind")
+        if not kind:
+            r.error(f"{p}.recognition_kind: missing")
 
-        if spec.get("evidence_required") is not True:
-            r.error(f"{p}.evidence_required: must be true")
+        command = spec.get("command")
+        if not isinstance(command, dict):
+            r.error(f"{p}.command: expected mapping")
+        else:
+            tokens = command.get("tokens")
+            if not isinstance(tokens, list) or not tokens:
+                r.error(f"{p}.command.tokens: must be non-empty list")
 
-    # --------------------------------------------------------
-    # Relationship taxonomy
-    # --------------------------------------------------------
-    # known_semantic_kinds: Set[str] = set(objects) | set(file_types) | {
-    #     "datapower_object",
-    #     "datapower_service",
-    #     "service",
-    #     "processing_action",
-    #     "source_artifact",
-    #     "file_inventory_entry",
-    #     "backend_endpoint",
-    #     "service_endpoint",
-    #     "database_endpoint",
-    #     "endpoint",
-    #     "hostname",
-    #     "ip_address",
-    #     "url_pattern",
-    #     "logging_sink",
-    #     "backend_member",
-    #     "protocol_handler",
-    #     "security_policy",
-    #     "taxonomy_constrained_at_runtime",
-    # }
-    known_semantic_kinds: Set[str] = (
-        set(objects)
-        | set(file_types)
-        | set(references)
-        | {
-            "datapower_object",
-            "datapower_service",
-            "service",
-            "processing_action",
-            "source_artifact",
-            "file_inventory_entry",
-            "backend_endpoint",
-            "service_endpoint",
-            "database_endpoint",
-            "endpoint",
-            "hostname",
-            "ip_address",
-            "url_pattern",
-            "logging_sink",
-            "backend_member",
-            "protocol_handler",
-            "security_policy",
-            "taxonomy_constrained_at_runtime",
-        }
+    # ------------------------------------------------------------------
+    # Property taxonomy
+    # ------------------------------------------------------------------
+    valid_property_kinds = set(
+        get_mapping(
+            bundle.datapower_properties,
+            "property_kinds",
+            "datapower_properties",
+        )
     )
 
-    for rel_name, spec in relationships.items():
-        p = f"relationship_types.relationships.{rel_name}"
-        if not isinstance(spec, dict):
-            r.error(f"{p}: relationship definition must be a mapping")
+    for source_type, props in property_rules.items():
+        p = f"datapower_properties.property_rules.{source_type}"
+
+        if source_type not in object_types:
+            r.error(f"{p}: source type is not defined in datapower_objects")
+
+        if not isinstance(props, dict):
+            r.error(f"{p}: expected mapping")
             continue
 
-        if spec.get("directed") is not True:
-            r.error(f"{p}.directed: expected true")
+        for prop_name, spec in props.items():
+            pp = f"{p}.{prop_name}"
+            if not isinstance(spec, dict):
+                r.error(f"{pp}: expected mapping")
+                continue
 
-        if spec.get("evidence_required") is not True:
-            r.error(f"{p}.evidence_required: expected true")
+            kind = spec.get("property_kind")
+            if kind not in valid_property_kinds:
+                r.error(f"{pp}.property_kind: invalid {kind!r}")
 
-        if not spec.get("category"):
-            r.error(f"{p}.category: missing relationship category")
+            target = spec.get("target_type")
+            if target and target not in object_types:
+                r.error(f"{pp}.target_type: undefined object type {target!r}")
 
-        for side in ("source_kinds", "target_kinds"):
-            values = as_list(spec.get(side))
-            if not values:
-                r.error(f"{p}.{side}: must not be empty")
-            for kind in values:
-                if kind not in known_semantic_kinds:
-                    r.warn(
-                        f"{p}.{side}: semantic kind {kind!r} is not centrally registered"
-                    )
-
-    # Explicit semantic checks discovered from current object taxonomy.
-    required_source_compatibility = {
-        "uses_crypto_certificate": {
-            "crypto_identification_credentials",
-            "crypto_validation_credentials",
-        },
-        "uses_crypto_key": {
-            "crypto_identification_credentials",
-        },
-    }
-
-    for rel, required_sources in required_source_compatibility.items():
-        if rel not in relationships:
-            continue
-        actual = set(as_list(relationships[rel].get("source_kinds")))
-        missing = sorted(required_sources - actual)
-        if missing:
-            r.error(
-                f"relationship_types.relationships.{rel}.source_kinds: "
-                f"missing source kinds required by datapower_objects: {missing}"
-            )
-
-    # --------------------------------------------------------
-    # File taxonomy
-    # --------------------------------------------------------
-    required_pre_scan_flags = {
-        "requires_content_sensitivity_scan": True,
-        "may_contain_secret_value": True,
-        "require_redaction_if_detected": True,
-        "allow_raw_content_in_search_index_before_scan": False,
-        "allow_raw_content_in_agent_context_before_scan": False,
-        "allow_raw_content_in_reports_before_scan": False,
-    }
-
-    sanitized_flags = {
-        "allow_sanitized_content_in_search_index",
-        "allow_sanitized_content_in_agent_context",
-        "allow_sanitized_content_in_reports",
-    }
-
-    for flag in required_pre_scan_flags:
-        if flag not in file_defaults:
-            r.error(f"file_types.standard_flags.defaults: missing flag {flag!r}")
-    for flag in sanitized_flags:
-        if flag not in file_defaults:
-            r.error(f"file_types.standard_flags.defaults: missing flag {flag!r}")
-
-    for file_type, spec in file_types.items():
-        p = f"file_types.file_types.{file_type}"
-        mode = spec.get("agent_indexing")
-        if mode not in agent_modes:
-            r.error(f"{p}.agent_indexing: undefined mode {mode!r}")
-
-        flags = spec.get("flags") or {}
-        unknown_flags = sorted(set(flags) - set(file_defaults))
-        if unknown_flags:
-            r.error(
-                f"{p}.flags: flags are not declared in standard_flags.defaults: {unknown_flags}"
-            )
-
-        effective = _effective_flags(
-            file_defaults,
-            agent_modes.get(mode, {}) if isinstance(agent_modes.get(mode), dict) else {},
-            flags,
-        )
-
-        if file_type in FILE_SCAN_REQUIRED:
-            for flag, expected in required_pre_scan_flags.items():
-                if effective.get(flag) != expected:
+            for target in as_list(spec.get("target_type_set")):
+                if target not in object_types:
                     r.error(
-                        f"{p}: effective {flag}={effective.get(flag)!r}, expected {expected!r}"
+                        f"{pp}.target_type_set: undefined object type {target!r}"
                     )
 
-    # --------------------------------------------------------
-    # File-output contract runtime fields
-    # --------------------------------------------------------
-    required_runtime_fields = {
-        "sensitivity_scan_status",
-        "contains_sensitive_content",
-        "detected_secret_count",
-        "detected_sensitivity_types",
-        "sanitized_content_available",
-        "sensitivity_scan_timestamp",
-    }
+            ref = spec.get("reference_type")
+            if ref and ref not in references:
+                r.error(f"{pp}.reference_type: undefined {ref!r}")
 
-    file_output = (
-        bundle.file_types.get("classification_output", {}).get("required_fields", [])
+            rel = spec.get("relationship_type")
+            if rel and rel not in relationships:
+                r.error(f"{pp}.relationship_type: undefined {rel!r}")
+
+            strategy = spec.get("resolution_strategy")
+            if strategy and strategy not in resolution_strategies:
+                r.error(f"{pp}.resolution_strategy: undefined {strategy!r}")
+
+            for arg in as_list(spec.get("arguments")):
+                if not isinstance(arg, dict):
+                    r.error(f"{pp}.arguments: each entry must be a mapping")
+                    continue
+                target = arg.get("target_type")
+                if target and target not in object_types:
+                    r.error(
+                        f"{pp}.arguments.target_type: undefined {target!r}"
+                    )
+                ref = arg.get("reference_type")
+                if ref and ref not in references:
+                    r.error(
+                        f"{pp}.arguments.reference_type: undefined {ref!r}"
+                    )
+                rel = arg.get("relationship_type")
+                if rel and rel not in relationships:
+                    r.error(
+                        f"{pp}.arguments.relationship_type: undefined {rel!r}"
+                    )
+
+    # ------------------------------------------------------------------
+    # Reference taxonomy
+    # ------------------------------------------------------------------
+    families = get_mapping(
+        bundle.reference_types,
+        "reference_families",
+        "reference_types",
     )
-    missing_runtime = sorted(required_runtime_fields - set(file_output))
-    if missing_runtime:
-        r.error(
-            "file_types.classification_output.required_fields: "
-            f"missing runtime sensitivity fields {missing_runtime}"
-        )
 
-    # --------------------------------------------------------
-    # Prohibited classification labels
-    # Do not treat validation-policy lists themselves as usage.
-    # --------------------------------------------------------
-    for name, doc in (
-        ("datapower_objects", bundle.datapower_objects),
-        ("file_types", bundle.file_types),
-        ("sensitivity", bundle.sensitivity),
-    ):
-        # We intentionally do not fail just because prohibited labels are
-        # listed under a validation policy. Scan object/file classification
-        # values explicitly instead.
-        pass
+    for name, spec in references.items():
+        p = f"reference_types.reference_types.{name}"
+        if not isinstance(spec, dict):
+            r.error(f"{p}: expected mapping")
+            continue
 
-    for object_key, spec in objects.items():
-        for key in ("canonical_type", "category", "sensitivity", "indexing_policy"):
-            value = spec.get(key)
-            if isinstance(value, str) and value.lower() in PROHIBITED_LABELS:
+        family = spec.get("family")
+        if family not in families:
+            r.error(f"{p}.family: undefined {family!r}")
+
+        for ft in as_list(spec.get("expected_file_types")):
+            if ft not in file_types:
+                r.error(f"{p}.expected_file_types: undefined {ft!r}")
+
+    # ------------------------------------------------------------------
+    # Relationship taxonomy
+    # ------------------------------------------------------------------
+    rel_families = get_mapping(
+        bundle.relationship_types,
+        "semantic_families",
+        "relationship_types",
+    )
+
+    for name, spec in relationships.items():
+        p = f"relationship_types.relationship_types.{name}"
+        if not isinstance(spec, dict):
+            r.error(f"{p}: expected mapping")
+            continue
+
+        family = spec.get("family")
+        if family not in rel_families:
+            r.error(f"{p}.family: undefined {family!r}")
+
+        for source in as_list(spec.get("allowed_sources")):
+            if source not in object_types:
+                r.error(f"{p}.allowed_sources: undefined {source!r}")
+
+        for target in as_list(spec.get("allowed_targets")):
+            if target not in object_types:
+                r.error(f"{p}.allowed_targets: undefined {target!r}")
+
+    # ------------------------------------------------------------------
+    # Cross taxonomy
+    # ------------------------------------------------------------------
+    mapping_ids: Set[str] = set()
+
+    for idx, mapping in enumerate(cross_mappings):
+        p = f"cross_taxonomy.mappings[{idx}]"
+
+        if not isinstance(mapping, dict):
+            r.error(f"{p}: expected mapping")
+            continue
+
+        mapping_id = mapping.get("mapping_id")
+        if not mapping_id:
+            r.error(f"{p}.mapping_id: missing")
+        elif mapping_id in mapping_ids:
+            r.error(f"{p}.mapping_id: duplicate {mapping_id!r}")
+        else:
+            mapping_ids.add(mapping_id)
+
+        source_type = mapping.get("source_type")
+        property_name = mapping.get("property_name")
+        property_kind = mapping.get("property_kind")
+        reference_type = mapping.get("reference_type")
+        relationship_type = mapping.get("relationship_type")
+        resolution_strategy = mapping.get("resolution_strategy")
+
+        if source_type not in object_types:
+            r.error(f"{p}.source_type: undefined {source_type!r}")
+            continue
+
+        source_props = property_rules.get(source_type, {})
+        prop_spec = source_props.get(property_name)
+        if not isinstance(prop_spec, dict):
+            r.error(
+                f"{p}: property {property_name!r} is not defined for "
+                f"source type {source_type!r}"
+            )
+            continue
+
+        expected_kind = prop_spec.get("property_kind")
+        if property_kind != expected_kind:
+            r.error(
+                f"{p}.property_kind: {property_kind!r} does not match "
+                f"property taxonomy {expected_kind!r}"
+            )
+
+        if reference_type not in references:
+            r.error(f"{p}.reference_type: undefined {reference_type!r}")
+
+        if relationship_type not in relationships:
+            r.error(
+                f"{p}.relationship_type: undefined {relationship_type!r}"
+            )
+
+        if resolution_strategy not in resolution_strategies:
+            r.error(
+                f"{p}.resolution_strategy: undefined {resolution_strategy!r}"
+            )
+
+        target_type = mapping.get("target_type")
+        target_type_set = as_list(mapping.get("target_type_set"))
+
+        if target_type and target_type not in object_types:
+            r.error(f"{p}.target_type: undefined {target_type!r}")
+
+        for target in target_type_set:
+            if target not in object_types:
+                r.error(f"{p}.target_type_set: undefined {target!r}")
+
+        if relationship_type in relationships:
+            rel_spec = relationships[relationship_type]
+            allowed_sources = set(as_list(rel_spec.get("allowed_sources")))
+            allowed_targets = set(as_list(rel_spec.get("allowed_targets")))
+
+            if allowed_sources and source_type not in allowed_sources:
                 r.error(
-                    f"datapower_objects.object_types.{object_key}.{key}: "
-                    f"prohibited generic classification {value!r}"
+                    f"{p}: relationship {relationship_type!r} does not allow "
+                    f"source {source_type!r}"
                 )
 
-    for file_key in file_types:
-        if file_key.lower() in PROHIBITED_LABELS:
-            r.error(
-                f"file_types.file_types.{file_key}: prohibited generic classification label"
-            )
+            targets_to_check = set(target_type_set)
+            if target_type:
+                targets_to_check.add(target_type)
+
+            for target in targets_to_check:
+                if allowed_targets and target not in allowed_targets:
+                    r.error(
+                        f"{p}: relationship {relationship_type!r} does not "
+                        f"allow target {target!r}"
+                    )
+
+        argument_position = mapping.get("argument_position")
+        if argument_position is not None:
+            args = as_list(prop_spec.get("arguments"))
+            matches = [
+                a for a in args
+                if isinstance(a, dict)
+                and a.get("position") == argument_position
+            ]
+            if not matches:
+                r.error(
+                    f"{p}.argument_position: no corresponding property "
+                    f"argument definition for position {argument_position}"
+                )
 
     return r
 
 
 def print_report(report: ValidationReport) -> None:
-    print("=" * 72)
-    print("DATAPOWER TAXONOMY VALIDATION")
-    print("=" * 72)
+    print("=" * 76)
+    print("DATAPOWER CROSS-TAXONOMY VALIDATION V2")
+    print("=" * 76)
 
     for key, value in report.metrics.items():
-        print(f"{key:34} {value}")
+        print(f"{key:36} {value}")
 
-    print("-" * 72)
+    print("-" * 76)
 
-    if report.errors:
-        print(f"ERRORS:   {len(report.errors)}")
-        for msg in report.errors:
-            print(f"  [ERROR] {msg}")
-    else:
-        print("ERRORS:   0")
+    print(f"ERRORS:   {len(report.errors)}")
+    for msg in report.errors:
+        print(f"  [ERROR] {msg}")
 
-    if report.warnings:
-        print(f"WARNINGS: {len(report.warnings)}")
-        for msg in report.warnings:
-            print(f"  [WARN]  {msg}")
-    else:
-        print("WARNINGS: 0")
+    print(f"WARNINGS: {len(report.warnings)}")
+    for msg in report.warnings:
+        print(f"  [WARN]  {msg}")
 
-    print("-" * 72)
-
-    if report.ok:
-        print("CROSS-TAXONOMY VALIDATION: PASS")
-    else:
-        print("CROSS-TAXONOMY VALIDATION: FAILED")
+    print("-" * 76)
+    print(
+        "CROSS-TAXONOMY VALIDATION: PASS"
+        if report.ok
+        else "CROSS-TAXONOMY VALIDATION: FAILED"
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate DataPower modernization taxonomy files."
+        description="Validate DataPower taxonomy V2 semantic integrity."
     )
     parser.add_argument(
         "--taxonomy-dir",
         default="taxonomy",
-        help="Directory containing the five taxonomy YAML files (default: taxonomy)",
+        help="Directory containing DataPower taxonomy YAML files",
     )
     args = parser.parse_args()
 
@@ -423,8 +423,13 @@ def main() -> int:
         report = validate(bundle)
         print_report(report)
         return 0 if report.ok else 1
-
-    except (DuplicateKeyError, FileNotFoundError, KeyError, TypeError, ValueError) as exc:
+    except (
+        DuplicateKeyError,
+        FileNotFoundError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
         print("CROSS-TAXONOMY VALIDATION: FAILED", file=sys.stderr)
         print(f"[FATAL] {exc}", file=sys.stderr)
         return 2

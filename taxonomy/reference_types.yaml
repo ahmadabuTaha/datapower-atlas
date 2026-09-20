@@ -1,174 +1,172 @@
-version: 1
+version: "2.0"
+taxonomy_name: reference_types
+status: "v2_cross_taxonomy_ready"
+
+description: >
+  Reference vocabulary used after property extraction and before relationship
+  resolution. A reference records evidence that a source object/property points
+  to another object, file, endpoint, or embedded semantic target.
+
+reference_families:
+  object_reference:
+    description: "Reference to another DataPower configuration object."
+  file_reference:
+    description: "Reference to a DataPower filesystem artifact."
+  endpoint_reference:
+    description: "Reference to a remote or local network/resource endpoint."
+  embedded_reference:
+    description: "Reference embedded inside compound syntax."
 
 reference_types:
 
+  datapower_object_reference:
+    family: object_reference
+    target_identity_kind: datapower_object
+    resolution_required: true
+
   local_file:
-    category: filesystem_reference
-    target_kind: datapower_cfg
-    schemes:
-      - "local:///"
-    extensions: []
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Local filesystem reference to a DataPower file artifact."
-
-  certificate_file:
-    category: cryptographic_file
-    target_kind: pem_certificate_or_key_material
-    schemes:
-      - "cert:///"
-    extensions:
-      - ".pem"
-      - ".cer"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: certificate_public_material
-    evidence_required: true
-    description: "Reference to a certificate file stored in DataPower or a local certificate store."
-
-  public_certificate_file:
-    category: cryptographic_file
-    target_kind: pem_certificate_or_key_material
-    schemes:
-      - "pubcert:///"
-    extensions:
-      - ".pem"
-      - ".cer"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: certificate_public_material
-    evidence_required: true
-    description: "Reference to a public certificate file or certificate material."
-
-  configuration_file:
-    category: configuration_file_reference
-    target_kind: datapower_cfg
-    schemes:
-      - "config:///"
-    extensions:
-      - ".cfg"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to a DataPower configuration file in the configuration store."
+    family: file_reference
+    schemes: ["local"]
+    target_identity_kind: file
+    resolution_required: false
 
   store_file:
-    category: filesystem_reference
-    target_kind: datapower_cfg
-    schemes:
-      - "store:///"
-    extensions: []
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to a file stored in the DataPower store area."
+    family: file_reference
+    schemes: ["store"]
+    target_identity_kind: file
+    resolution_required: false
 
   temporary_file:
-    category: filesystem_reference
-    target_kind: datapower_cfg
-    schemes:
-      - "temporary:///"
-    extensions: []
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to a temporary DataPower file created for transient processing."
+    family: file_reference
+    schemes: ["temporary"]
+    target_identity_kind: file
+    resolution_required: false
 
-  gatewayscript_file:
-    category: executable_source_file
-    target_kind: gateway_script_javascript
-    schemes: []
-    extensions:
-      - ".js"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to a GatewayScript JavaScript source file used by DataPower."
-
-  mq_client_configuration:
-    category: mq_configuration_file
-    target_kind: mq_client_ini
-    schemes: []
-    extensions:
-      - ".ini"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: security_configuration
-    evidence_required: true
-    description: "Reference to an MQ client configuration file that defines connection settings."
-
-  password_alias_reference:
-    category: credential_reference
-    target_kind: password_alias
-    schemes: []
-    extensions: []
-    resolvable_against:
-      - datapower_object_index
-    sensitivity_hint: credential_reference
-    evidence_required: true
-    description: "Reference to a password alias object used to resolve a secret without exposing the secret value."
-
-  private_key_file:
-    category: cryptographic_file
-    target_kind: pem_certificate_or_key_material
-    schemes: []
-    extensions:
-      - ".pem"
-      - ".key"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: private_key_material
-    evidence_required: true
-    description: "Reference to a file containing private key material."
-
-  wsdl_file:
-    category: service_definition_file
-    target_kind: wsdl_definition
-    schemes: []
-    extensions:
-      - ".wsdl"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to a WSDL service definition file."
-
-  xsd_file:
-    category: schema_definition_file
-    target_kind: xsd_schema
-    schemes: []
-    extensions:
-      - ".xsd"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to an XML schema definition file."
+  configuration_file:
+    family: file_reference
+    schemes: ["config"]
+    target_identity_kind: file
+    resolution_required: false
 
   xslt_file:
-    category: executable_source_file
-    target_kind: xslt_stylesheet
-    schemes: []
-    extensions:
-      - ".xsl"
-      - ".xslt"
-    resolvable_against:
-      - file_inventory
-    sensitivity_hint: internal_configuration
-    evidence_required: true
-    description: "Reference to an XSLT stylesheet file used by DataPower to transform content."
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - xslt_stylesheet
+    resolution_required: false
 
-validation:
-  fail_on_duplicate_reference_type: true
-  fail_on_missing_description: true
-  fail_on_missing_category: true
-  fail_on_missing_target_kind: true
-  fail_on_undefined_sensitivity_hint: true
-  fail_on_undefined_file_type_target: true
-  fail_on_undefined_object_type_target: true
+  gatewayscript_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - gateway_script_javascript
+    resolution_required: false
+
+  wsdl_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - wsdl_definition
+    resolution_required: false
+
+  xsd_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - xsd_schema
+    resolution_required: false
+
+  public_certificate_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - pem_certificate_or_key_material
+      - cer_certificate
+    sensitivity_expectation:
+      maximum: certificate_public_material
+    resolution_required: false
+
+  certificate_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - pem_certificate_or_key_material
+      - cer_certificate
+    resolution_required: false
+
+  private_key_file:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - pem_certificate_or_key_material
+    sensitivity_expectation:
+      minimum: private_key_material
+    raw_content_indexing_allowed: false
+    resolution_required: false
+
+  mq_client_configuration:
+    family: file_reference
+    target_identity_kind: file
+    expected_file_types:
+      - mq_client_ini
+      - ini_configuration
+    resolution_required: false
+
+  backend_endpoint:
+    family: endpoint_reference
+    target_identity_kind: endpoint
+    endpoint_role: backend
+    resolution_required: false
+
+  remote_resource_endpoint:
+    family: endpoint_reference
+    target_identity_kind: endpoint
+    endpoint_role: remote_resource
+    resolution_required: false
+
+  mq_endpoint:
+    family: endpoint_reference
+    target_identity_kind: endpoint
+    endpoint_role: messaging
+    resolution_required: false
+
+  embedded_matching_rule_reference:
+    family: embedded_reference
+    target_identity_kind: datapower_object
+    target_type: matching_rule
+    resolution_required: true
+
+  embedded_processing_rule_reference:
+    family: embedded_reference
+    target_identity_kind: datapower_object
+    target_type: processing_rule
+    resolution_required: true
+
+resolution_statuses:
+  - pending
+  - resolved_exact
+  - resolved_normalized
+  - resolved_file_inventory
+  - endpoint_parsed
+  - unresolved_target_not_found
+  - unresolved_ambiguous_target
+  - unresolved_due_to_missing_context
+  - unresolved_due_to_taxonomy_gap
+  - invalid_reference_value
+
+output_contract:
+  required_fields:
+    - reference_id
+    - source_object_id
+    - source_occurrence_id
+    - source_type
+    - source_name
+    - property_name
+    - raw_reference
+    - reference_type
+    - target_name
+    - target_type_hint
+    - source_line
+    - evidence_file
+    - evidence_hash
+    - resolution_status

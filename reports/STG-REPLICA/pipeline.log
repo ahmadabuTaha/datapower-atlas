@@ -1,0 +1,278 @@
+============================================================================
+DATAPOWER ATLAS - DOMAIN PIPELINE
+============================================================================
+Project root:      /Users/abutaha9/Documents/dev-sandbox/datapower-atlas
+Domain:            STG-Replica
+Environment:       STG
+Domain index:      index/STG-REPLICA
+Domain reports:    reports/STG-REPLICA
+Export root:       export-stg-uat/extracted
+CFG:               export-stg-uat/extracted/STG-Replica/config/STG-Replica.cfg
+Taxonomy:          taxonomy
+Python:            python
+============================================================================
+
+============================================================================
+1/9 - VALIDATE TAXONOMIES
+============================================================================
+============================================================================
+DATAPOWER CROSS-TAXONOMY VALIDATION V2
+============================================================================
+datapower_object_types               64
+property_source_types                20
+reference_types                      18
+relationship_types                   28
+endpoint_types                       11
+cross_mappings                       55
+file_type_buckets                    12
+sensitivity_levels                   8
+----------------------------------------------------------------------------
+ERRORS:   0
+WARNINGS: 0
+----------------------------------------------------------------------------
+CROSS-TAXONOMY VALIDATION: PASS
+
+============================================================================
+2/9 - BUILD DOMAIN FILE INVENTORY
+============================================================================
+========================================================================
+DATAPOWER FILE INVENTORY
+========================================================================
+Exported directory:   /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/export-stg-uat/extracted
+Taxonomy directory:   /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/taxonomy
+Output:               /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/index/STG-REPLICA/.files_all_domains.tmp.csv
+------------------------------------------------------------------------
+Files indexed:        1164
+Classified files:     1157
+Unclassified files:   7
+------------------------------------------------------------------------
+FILE INVENTORY BUILD: PASS
+Domain inventory rows: 213
+Domain inventory:      index/STG-REPLICA/files.csv
+
+============================================================================
+3/9 - SCAN SENSITIVITY
+============================================================================
+========================================================================
+DATAPOWER SENSITIVITY SCAN
+========================================================================
+Inventory:             /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/index/STG-REPLICA/files.csv
+Taxonomy:              /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/taxonomy
+Findings output:       /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/index/STG-REPLICA/sensitivity_findings.csv
+Scanned inventory:     /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/index/STG-REPLICA/files_scanned.csv
+Sanitized directory:   /Users/abutaha9/Documents/dev-sandbox/datapower-atlas/index/STG-REPLICA/sanitized
+------------------------------------------------------------------------
+Files scanned:         213
+Files skipped:         0
+Files failed:          0
+Files with findings:   0
+Total findings:        0
+------------------------------------------------------------------------
+SENSITIVITY SCAN: PASS
+
+============================================================================
+4/9 - PARSE DATAPOWER CFG
+============================================================================
+============================================================================
+DATAPOWER CFG PARSER 2.2 — ARCHITECTURE BETA
+============================================================================
+Parser version:                    2.2-architecture-beta-lossless
+Object occurrences:                1167
+Unique logical objects:            1158
+Repeated logical objects:          5
+Properties preserved:              18907
+Partial/malformed blocks:          0
+Unclassified top-level statements: 205
+----------------------------------------------------------------------------
+Object types:
+  api_client_identification_action: 1
+  api_connect_gateway_service: 1
+  api_cors_action: 1
+  api_execute_action: 1
+  api_final_action: 1
+  api_result_action: 1
+  api_routing_action: 1
+  api_rule: 8
+  api_security_action: 1
+  assembly_function: 3
+  assembly_function_call: 3
+  assembly_html_page_action: 1
+  assembly_rate_limit_action: 1
+  assembly_wsdl_action: 1
+  crypto_certificate: 3
+  crypto_identification_credentials: 1
+  crypto_key: 1
+  deployment_policy: 1
+  domain_settings: 1
+  gateway_peering: 11
+  gateway_peering_manager: 1
+  http_source_protocol_handler: 7
+  log_target: 1
+  matching_rule: 207
+  multi_protocol_gateway: 3
+  parse_settings: 1
+  password_alias: 4
+  policy_attachments: 5
+  processing_action: 646
+  processing_rule: 222
+  sql_data_source: 8
+  style_policy: 5
+  tls_client_profile: 1
+  url_map: 3
+  user_agent: 1
+  web_service_proxy_processing_policy: 1
+  xml_manager: 8
+----------------------------------------------------------------------------
+CFG PARSER 2.2: PASS
+
+============================================================================
+5/9 - EXTRACT REFERENCES
+============================================================================
+================================================================================
+DATAPOWER REFERENCE EXTRACTOR V1
+================================================================================
+Extractor version:           1.0-architecture-beta-domain-aware
+Properties scanned:          18907
+Cross mappings loaded:       55
+References extracted:        1327
+Domains observed:            1
+Taxonomy gaps:               0
+--------------------------------------------------------------------------------
+Reference families:
+  endpoint_reference                  1
+  file_reference                      235
+  object_reference                    1091
+--------------------------------------------------------------------------------
+Initial resolution status:
+  pending                             1327
+--------------------------------------------------------------------------------
+Top mappings:
+  processing_rule_action                        643
+  stylepolicy_match_matching                    215
+  stylepolicy_match_rule                        215
+  action_transform                              211
+  action_gatewayscript                          8
+  stylepolicy_filter                            5
+  stylepolicy_xsldefault                        5
+  xml_manager_user_agent                        4
+  certificate_file                              3
+  mpgw_front_protocol                           3
+  mpgw_xml_manager                              3
+  mpgw_stylepolicy                              3
+  idcred_ca                                     2
+  private_key_file                              1
+  idcred_key                                    1
+  idcred_certificate                            1
+  tls_client_idcred                             1
+  wsp_policy_filter                             1
+  wsp_policy_xsldefault                         1
+  mpgw_backend_url                              1
+--------------------------------------------------------------------------------
+REFERENCE EXTRACTOR V1: PASS
+
+============================================================================
+6/9 - RESOLVE OBJECT RELATIONSHIPS
+============================================================================
+================================================================================
+DATAPOWER RELATIONSHIP RESOLVER V1
+================================================================================
+Resolver version:            1.0-architecture-beta-domain-aware
+Objects loaded:              1167
+Unique logical objects:      1158
+References loaded:           1327
+Object references processed: 1091
+Resolved relationships:      1091
+Unresolved object refs:      0
+Deferred non-object refs:    236
+Domains observed:            1
+--------------------------------------------------------------------------------
+Resolution status:
+  resolved_exact                         1091
+--------------------------------------------------------------------------------
+Resolved relationship types:
+  contains_processing_action                    643
+  uses_matching_rule                            215
+  contains_processing_rule                      215
+  uses_user_agent                               4
+  uses_crypto_certificate                       3
+  uses_front_side_handler                       3
+  uses_xml_manager                              3
+  uses_processing_policy                        3
+  uses_crypto_key                               1
+  uses_crypto_identification_credentials        1
+--------------------------------------------------------------------------------
+RELATIONSHIP RESOLVER V1: PASS
+
+============================================================================
+7/9 - EXTRACT ENDPOINTS
+============================================================================
+================================================================================
+DATAPOWER ENDPOINT EXTRACTOR V1
+================================================================================
+Extractor version:             1.1-architecture-beta-wsp-composite
+References loaded:             236
+Endpoint references processed: 1
+Static endpoints parsed:       1
+Dynamic endpoint expressions:  0
+Invalid/unsupported endpoints: 0
+Unique static endpoints:       1
+Non-endpoint refs deferred:    235
+--------------------------------------------------------------------------------
+Endpoint types:
+  https_endpoint                           1
+--------------------------------------------------------------------------------
+Route roles:
+  configured_default_backend               1
+--------------------------------------------------------------------------------
+Parse status:
+  parsed_static_endpoint                   1
+--------------------------------------------------------------------------------
+ENDPOINT EXTRACTOR V1: PASS
+
+============================================================================
+8/9 - RESOLVE FILE REFERENCES
+============================================================================
+================================================================================
+DATAPOWER FILE REFERENCE RESOLVER V1
+================================================================================
+Resolver version:             1.0-architecture-beta-exact-path
+References loaded:            235
+Inventory files loaded:       213
+File references processed:    235
+Resolved exact:               0
+Unresolved file references:   235
+--------------------------------------------------------------------------------
+Resolution status:
+  unresolved_file_not_found                235
+--------------------------------------------------------------------------------
+Resolved relationship types:
+--------------------------------------------------------------------------------
+Resolved file classifications:
+--------------------------------------------------------------------------------
+FILE REFERENCE RESOLVER V1: PASS WITH UNRESOLVED REFERENCES
+
+============================================================================
+9/9 - BUILD SERVICE JOURNEYS
+============================================================================
+================================================================================
+DATAPOWER SERVICE JOURNEY BUILDER V1
+================================================================================
+Builder version:            1.0-architecture-beta-evidence-only
+Service roots built:        3
+Journey output:             index/STG-REPLICA/service_journeys.jsonl
+Summary output:             index/STG-REPLICA/service_journey_summary.csv
+--------------------------------------------------------------------------------
+Root types:
+  multi_protocol_gateway                   3
+--------------------------------------------------------------------------------
+SERVICE JOURNEY BUILDER V1: BUILT — VALIDATE BEFORE FREEZE
+
+============================================================================
+PIPELINE COMPLETE
+============================================================================
+Domain:             STG-Replica
+Index:              index/STG-REPLICA
+Pipeline log:       reports/STG-REPLICA/pipeline.log
+Manifest:           reports/STG-REPLICA/manifest.txt
+
+DATAPOWER DOMAIN PIPELINE: PASS

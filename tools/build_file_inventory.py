@@ -1,353 +1,231 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import csv
 import hashlib
+import json
+import sys
 from pathlib import Path
+from typing import Any, Dict, Iterable, Tuple
 
+from taxonomy_loader import get_mapping, load_taxonomies
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-EXTRACTED_DIR = PROJECT_ROOT / "extracted"
-INDEX_DIR = PROJECT_ROOT / "index"
-OUTPUT_FILE = INDEX_DIR / "files.csv"
+RUNTIME_DEFAULTS = {
+    "sensitivity_scan_status": "not_scanned",
+    "contains_sensitive_content": None,
+    "detected_secret_count": 0,
+    "detected_sensitivity_types": [],
+    "sanitized_content_available": False,
+    "sensitivity_scan_timestamp": None,
+}
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
     digest = hashlib.sha256()
-
-    with path.open("rb") as file:
+    with path.open("rb") as fh:
         while True:
-            chunk = file.read(chunk_size)
+            chunk = fh.read(chunk_size)
             if not chunk:
                 break
-
             digest.update(chunk)
-
     return digest.hexdigest()
 
 
-def classify_file(path: Path) -> tuple[str, str]:
-    """
-    Returns:
-        (classification, classification_reason)
+def derive_environment(relative_to_exported: Path) -> str:
+    if not relative_to_exported.parts:
+        return "unclassified_due_to_missing_environment_path"
+    return relative_to_exported.parts[0]
 
-    Important:
-    - No vague categories such as Other, Misc, Various, Unknown.
-    - Unsupported extensions are classified explicitly.
-    """
 
-    name = path.name.lower()
-    suffix = path.suffix.lower()
+def build_rule_indexes(file_types: Dict[str, Any], case_sensitive_extensions: bool,
+                       case_sensitive_filenames: bool) -> Tuple[Dict[str, str], Dict[str, str]]:
+    ext_index: Dict[str, str] = {}
+    filename_index: Dict[str, str] = {}
+    for file_type, spec in file_types.items():
+        for ext in spec.get("extensions", []) or []:
+            key = ext if case_sensitive_extensions else ext.lower()
+            if key in ext_index and ext_index[key] != file_type:
+                raise ValueError(f"Duplicate extension rule {ext!r}: {ext_index[key]!r} and {file_type!r}")
+            ext_index[key] = file_type
+        for filename in spec.get("exact_filenames", []) or []:
+            key = filename if case_sensitive_filenames else filename.lower()
+            if key in filename_index and filename_index[key] != file_type:
+                raise ValueError(f"Duplicate exact filename rule {filename!r}: {filename_index[key]!r} and {file_type!r}")
+            filename_index[key] = file_type
+    return ext_index, filename_index
 
-    # DataPower configuration
-    if suffix == ".cfg":
-        return (
-            "datapower_cfg",
-            "classified_by_cfg_extension",
-        )
 
-    # XSLT / XSL
-    if suffix in {".xsl", ".xslt"}:
-        return (
-            "xslt_stylesheet",
-            f"classified_by_{suffix.removeprefix('.')}_extension",
-        )
+def classify_file(path: Path, unclassified_types: Dict[str, Any], classification_rules: Dict[str, Any],
+                  ext_index: Dict[str, str], filename_index: Dict[str, str]) -> Tuple[str, str, str, str]:
+    cs_ext = classification_rules.get("case_sensitive_extensions", False)
+    cs_name = classification_rules.get("case_sensitive_filenames", False)
+    filename_key = path.name if cs_name else path.name.lower()
+    ext = path.suffix if cs_ext else path.suffix.lower()
 
-    # GatewayScript / JavaScript
-    if suffix == ".js":
-        return (
-            "gateway_script_javascript",
-            "classified_by_js_extension",
-        )
+    if filename_key in filename_index:
+        ft = filename_index[filename_key]
+        return ft, "classified", f"Exact filename matched taxonomy rule for {ft}", f"exact_filename:{path.name}"
 
-    # Web service and XML schemas
-    if suffix == ".wsdl":
-        return (
-            "wsdl_definition",
-            "classified_by_wsdl_extension",
-        )
+    if ext:
+        if ext in ext_index:
+            ft = ext_index[ext]
+            return ft, "classified", f"Extension {path.suffix!r} matched taxonomy rule for {ft}", f"extension:{path.suffix}"
+        fallback = "unclassified_due_to_unsupported_extension"
+        if fallback not in unclassified_types:
+            raise KeyError(f"Missing required unclassified file type {fallback!r}")
+        return fallback, fallback, f"Extension {path.suffix!r} has no taxonomy classification rule", f"unsupported_extension:{path.suffix}"
 
-    if suffix == ".xsd":
-        return (
-            "xsd_schema",
-            "classified_by_xsd_extension",
-        )
+    fallback = "unclassified_due_to_missing_extension"
+    if fallback not in unclassified_types:
+        raise KeyError(f"Missing required unclassified file type {fallback!r}")
+    return fallback, fallback, "File has no extension and no exact filename classification matched", "missing_extension"
 
-    # XML / JSON
-    if suffix == ".xml":
-        return (
-            "xml_document",
-            "classified_by_xml_extension",
-        )
 
-    if suffix == ".json":
-        return (
-            "json_document",
-            "classified_by_json_extension",
-        )
+def merge_effective_flags(defaults: Dict[str, Any], agent_mode: Dict[str, Any], file_type_flags: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(defaults)
+    for key, value in (agent_mode or {}).items():
+        if key in defaults:
+            merged[key] = value
+    merged.update(file_type_flags or {})
+    return merged
 
-    # MQ configuration
-    if name == "mqclient.ini":
-        return (
-            "mq_client_ini",
-            "classified_by_exact_mqclient_ini_filename",
-        )
 
-    # Generic INI configuration
-    if suffix == ".ini":
-        return (
-            "ini_configuration",
-            "classified_by_ini_extension",
-        )
+def make_file_id(environment: str, relative_path_inside_environment: str) -> str:
+    return f"file:{environment}:{relative_path_inside_environment}"
 
-    # Property/config formats
-    if suffix == ".properties":
-        return (
-            "properties_configuration",
-            "classified_by_properties_extension",
-        )
 
-    if suffix in {".yaml", ".yml"}:
-        return (
-            "yaml_configuration",
-            f"classified_by_{suffix.removeprefix('.')}_extension",
-        )
+def json_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
-    # Text
-    if suffix == ".txt":
-        return (
-            "text_document",
-            "classified_by_txt_extension",
-        )
 
-    # Certificates
-    if suffix == ".pem":
-        return (
-            "pem_certificate_or_key_material",
-            "classified_by_pem_extension",
-        )
+def iter_files(root: Path) -> Iterable[Path]:
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            yield path
 
-    if suffix == ".cer":
-        return (
-            "cer_certificate",
-            "classified_by_cer_extension",
-        )
 
-    if suffix == ".crt":
-        return (
-            "crt_certificate",
-            "classified_by_crt_extension",
-        )
+def build_inventory(exported_dir: Path, taxonomy_dir: Path, output_csv: Path) -> int:
+    bundle = load_taxonomies(taxonomy_dir)
+    file_taxonomy = bundle.file_types
+    classification_rules = get_mapping(file_taxonomy, "classification_rules", "file_types")
+    standard_flags = get_mapping(get_mapping(file_taxonomy, "standard_flags", "file_types"), "defaults", "file_types.standard_flags")
+    agent_modes = get_mapping(file_taxonomy, "agent_indexing_modes", "file_types")
+    file_types = get_mapping(file_taxonomy, "file_types", "file_types")
+    unclassified_types = get_mapping(file_taxonomy, "unclassified_file_types", "file_types")
 
-    if suffix == ".der":
-        return (
-            "der_certificate",
-            "classified_by_der_extension",
-        )
-
-    # Keystores
-    if suffix in {".p12", ".pfx"}:
-        return (
-            "pkcs12_keystore",
-            f"classified_by_{suffix.removeprefix('.')}_extension",
-        )
-
-    if suffix == ".jks":
-        return (
-            "java_keystore",
-            "classified_by_jks_extension",
-        )
-
-    # SQL
-    if suffix == ".sql":
-        return (
-            "sql_script",
-            "classified_by_sql_extension",
-        )
-
-    # Shell / command scripts
-    if suffix == ".sh":
-        return (
-            "shell_script",
-            "classified_by_sh_extension",
-        )
-
-    if suffix in {".bat", ".cmd"}:
-        return (
-            "windows_command_script",
-            f"classified_by_{suffix.removeprefix('.')}_extension",
-        )
-
-    # Archives
-    if suffix == ".zip":
-        return (
-            "zip_archive",
-            "classified_by_zip_extension",
-        )
-
-    if suffix in {".gz", ".tgz"}:
-        return (
-            "gzip_archive",
-            f"classified_by_{suffix.removeprefix('.')}_extension",
-        )
-
-    if suffix == ".tar":
-        return (
-            "tar_archive",
-            "classified_by_tar_extension",
-        )
-
-    # Known binary formats
-    if suffix in {".jar"}:
-        return (
-            "java_archive_binary",
-            "classified_by_jar_extension",
-        )
-
-    if suffix in {".dll"}:
-        return (
-            "windows_dynamic_library_binary",
-            "classified_by_dll_extension",
-        )
-
-    if suffix in {".so"}:
-        return (
-            "linux_shared_library_binary",
-            "classified_by_so_extension",
-        )
-
-    # macOS metadata
-    if name == ".ds_store":
-        return (
-            "macos_directory_metadata",
-            "classified_by_exact_ds_store_filename",
-        )
-
-    # No extension
-    if not suffix:
-        return (
-            "unclassified_due_to_missing_extension",
-            "file_has_no_extension_and_content_has_not_yet_been_inspected",
-        )
-
-    # Explicit unsupported-extension classification
-    return (
-        f"unclassified_due_to_unsupported_extension_{suffix.removeprefix('.')}",
-        f"extension_{suffix}_is_not_yet_present_in_classification_rules",
+    ext_index, filename_index = build_rule_indexes(
+        file_types,
+        classification_rules.get("case_sensitive_extensions", False),
+        classification_rules.get("case_sensitive_filenames", False),
     )
 
+    required_fields = list(file_taxonomy.get("classification_output", {}).get("required_fields", []))
+    if not required_fields:
+        raise ValueError("file_types.classification_output.required_fields is empty or missing")
 
-def get_environment(file_path: Path) -> str:
-    """
-    Expected structure:
+    extra_fields = ["raw_content_policy", "absolute_path"]
+    fieldnames = required_fields + [f for f in extra_fields if f not in required_fields]
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
 
-    extracted/
-        STG/
-        UAT/
-        STG-Replica/
-        UAT-Replica/
-        default/
-    """
+    row_count = classified_count = unclassified_count = 0
 
-    relative = file_path.relative_to(EXTRACTED_DIR)
-
-    if not relative.parts:
-        raise ValueError(f"Cannot determine environment for {file_path}")
-
-    return relative.parts[0]
-
-
-def build_inventory() -> list[dict[str, str | int]]:
-    rows: list[dict[str, str | int]] = []
-
-    for path in sorted(EXTRACTED_DIR.rglob("*")):
-        if not path.is_file():
-            continue
-
-        relative_path = path.relative_to(EXTRACTED_DIR)
-        environment = get_environment(path)
-
-        classification, classification_reason = classify_file(path)
-
-        row = {
-            "environment": environment,
-            "relative_path": relative_path.as_posix(),
-            "file_name": path.name,
-            "extension": path.suffix.lower(),
-            "size_bytes": path.stat().st_size,
-            "sha256": sha256_file(path),
-            "classification": classification,
-            "classification_reason": classification_reason,
-        }
-
-        rows.append(row)
-
-    return rows
-
-
-def write_csv(rows: list[dict[str, str | int]]) -> None:
-    INDEX_DIR.mkdir(parents=True, exist_ok=True)
-
-    fieldnames = [
-        "environment",
-        "relative_path",
-        "file_name",
-        "extension",
-        "size_bytes",
-        "sha256",
-        "classification",
-        "classification_reason",
-    ]
-
-    with OUTPUT_FILE.open(
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as file:
-        writer = csv.DictWriter(
-            file,
-            fieldnames=fieldnames,
-        )
-
+    with output_csv.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+
+        for path in iter_files(exported_dir):
+            rel_exported = path.relative_to(exported_dir)
+            environment = derive_environment(rel_exported)
+            rel_inside_env = Path(*rel_exported.parts[1:]) if len(rel_exported.parts) > 1 else Path(path.name)
+
+            classification, status, reason, rule = classify_file(
+                path, unclassified_types, classification_rules, ext_index, filename_index
+            )
+
+            if classification in file_types:
+                spec = file_types[classification]
+                classified_count += 1
+            else:
+                spec = unclassified_types[classification]
+                unclassified_count += 1
+
+            agent_indexing = spec.get("agent_indexing", "metadata_only")
+            if agent_indexing not in agent_modes:
+                raise KeyError(f"{classification}: undefined agent_indexing mode {agent_indexing!r}")
+
+            agent_mode = agent_modes[agent_indexing]
+            effective_flags = merge_effective_flags(standard_flags, agent_mode, spec.get("flags", {}) or {})
+
+            row: Dict[str, Any] = {
+                "file_id": make_file_id(environment, rel_inside_env.as_posix()),
+                "environment": environment,
+                "relative_path": rel_inside_env.as_posix(),
+                "file_name": path.name,
+                "extension": path.suffix,
+                "size_bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+                "classification": classification,
+                "classification_status": status,
+                "classification_reason": reason,
+                "classification_rule": rule,
+                "agent_indexing": agent_indexing,
+                "raw_content_policy": agent_mode.get("raw_content_policy", ""),
+                "absolute_path": str(path.resolve()),
+            }
+            row.update(effective_flags)
+            row.update(RUNTIME_DEFAULTS)
+
+            missing = [f for f in required_fields if f not in row]
+            if missing:
+                raise ValueError(f"{classification}: output row is missing required fields: {missing}")
+
+            writer.writerow({k: json_cell(row.get(k)) for k in fieldnames})
+            row_count += 1
+
+    print("=" * 72)
+    print("DATAPOWER FILE INVENTORY")
+    print("=" * 72)
+    print(f"Exported directory:   {exported_dir}")
+    print(f"Taxonomy directory:   {taxonomy_dir}")
+    print(f"Output:               {output_csv}")
+    print("-" * 72)
+    print(f"Files indexed:        {row_count}")
+    print(f"Classified files:     {classified_count}")
+    print(f"Unclassified files:   {unclassified_count}")
+    print("-" * 72)
+    print("FILE INVENTORY BUILD: PASS")
+    return 0
 
 
-def print_summary(rows: list[dict[str, str | int]]) -> None:
-    counts: dict[tuple[str, str], int] = {}
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Build canonical DataPower file inventory from exported archives.")
+    parser.add_argument("--exported-dir", default="export-stg-uat", help="Root directory containing extracted DataPower domains (default: exported)")
+    parser.add_argument("--taxonomy-dir", default="taxonomy", help="Taxonomy directory (default: taxonomy)")
+    parser.add_argument("--output", default="index/files.csv", help="Output CSV path (default: index/files.csv)")
+    args = parser.parse_args()
 
-    for row in rows:
-        key = (
-            str(row["environment"]),
-            str(row["classification"]),
-        )
+    exported_dir = Path(args.exported_dir).resolve()
+    taxonomy_dir = Path(args.taxonomy_dir).resolve()
+    output_csv = Path(args.output).resolve()
 
-        counts[key] = counts.get(key, 0) + 1
+    if not exported_dir.exists() or not exported_dir.is_dir():
+        print(f"FILE INVENTORY BUILD: FAILED\n[FATAL] Exported directory invalid: {exported_dir}", file=sys.stderr)
+        return 2
 
-    print()
-    print(f"Inventory written to: {OUTPUT_FILE}")
-    print(f"Total files indexed: {len(rows)}")
-    print()
-    print("Files by environment and classification:")
-    print()
-
-    for (environment, classification), count in sorted(counts.items()):
-        print(
-            f"{environment:<20} "
-            f"{classification:<60} "
-            f"{count:>6}"
-        )
-
-
-def main() -> None:
-    if not EXTRACTED_DIR.exists():
-        raise SystemExit(
-            f"Extracted directory does not exist: {EXTRACTED_DIR}"
-        )
-
-    rows = build_inventory()
-    write_csv(rows)
-    print_summary(rows)
+    try:
+        return build_inventory(exported_dir, taxonomy_dir, output_csv)
+    except Exception as exc:
+        print("FILE INVENTORY BUILD: FAILED", file=sys.stderr)
+        print(f"[FATAL] {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,0 +1,102 @@
+version: "1.0"
+taxonomy_name: endpoint_types
+status: "v1_cross_taxonomy_ready"
+
+description: >
+  Endpoint classification for network/resource destinations discovered from
+  DataPower properties. URI scheme alone is not sufficient to infer security
+  semantics such as mTLS.
+
+endpoint_types:
+
+  http_endpoint:
+    schemes: ["http"]
+    transport: http
+    encrypted: false
+
+  https_endpoint:
+    schemes: ["https"]
+    transport: https
+    encrypted: true
+    mtls_inference_allowed_from_scheme_only: false
+
+  mq_endpoint:
+    schemes: ["dpmq", "mq"]
+    transport: mq
+    encrypted: "depends_on_configuration"
+
+  ftp_endpoint:
+    schemes: ["ftp"]
+    transport: ftp
+    encrypted: false
+
+  sftp_endpoint:
+    schemes: ["sftp"]
+    transport: sftp
+    encrypted: true
+
+  tcp_endpoint:
+    schemes: ["tcp"]
+    transport: tcp
+    encrypted: "depends_on_configuration"
+
+  local_datapower_resource:
+    schemes: ["local"]
+    transport: local_filesystem
+    network_endpoint: false
+
+  store_resource:
+    schemes: ["store"]
+    transport: firmware_store
+    network_endpoint: false
+
+  certificate_resource:
+    schemes: ["cert"]
+    transport: certificate_store
+    network_endpoint: false
+
+  temporary_resource:
+    schemes: ["temporary"]
+    transport: temporary_filesystem
+    network_endpoint: false
+
+  host_port_endpoint:
+    schemes: []
+    parser: host_port
+    transport: "property_context_required"
+
+normalization:
+  lowercase_scheme: true
+  lowercase_dns_host: true
+  preserve_path_case: true
+  preserve_query: true
+  preserve_fragment: true
+  strip_credentials_from_index: true
+  hash_sensitive_userinfo: true
+
+security_inference:
+  mtls:
+    required_evidence:
+      - outbound_https_endpoint
+      - tls_client_profile_reference
+      - crypto_identification_credentials_reference
+      - crypto_key_reference
+      - crypto_certificate_reference
+      - crypto_validation_credentials_reference
+    https_alone_is_sufficient: false
+
+output_contract:
+  required_fields:
+    - endpoint_id
+    - source_object_id
+    - source_type
+    - property_name
+    - raw_endpoint
+    - normalized_endpoint
+    - endpoint_type
+    - scheme
+    - host
+    - port
+    - path
+    - evidence_file
+    - evidence_line

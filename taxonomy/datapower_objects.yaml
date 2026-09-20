@@ -1,1751 +1,1255 @@
-version: "1.1"
-
+version: 3.0-beta
 taxonomy_name: datapower_objects
+status: architecture_beta_object_classifier_with_lossless_property_capture
+description: Architecture-relevant canonical vocabulary for recognizing IBM DataPower configuration objects in CLI .cfg exports.
+  The taxonomy classifies objects needed for As-Is architecture and functional replacement analysis. Fine-grained configuration
+  statements remain properties and are preserved losslessly by the parser.
+design_principles:
+  raw_cfg_is_authoritative: true
+  ibm_cli_documentation_is_grammar_authority: true
+  object_identity_separate_from_relationship_semantics: true
+  properties_are_not_objects: true
+  configuration_modes_are_not_automatically_objects: true
+  aliases_must_be_evidence_backed: true
+  parent_context_is_part_of_identity_when_required: true
+  compound_commands_must_be_matched_as_compound_commands: true
+  preserve_repeated_occurrences: true
+  do_not_infer_relationships_from_names: true
+  freeze_passed_pipeline_layers_unless_contradicted: true
+  architecture_beta_scope: true
+  preserve_all_object_properties_losslessly: true
+  object_taxonomy_is_not_complete_cli_encyclopedia: true
+  observed_export_aliases_are_valid_evidence: true
+documentation_basis:
+  product: IBM DataPower Gateway
+  primary_version_family: 10.6.x
+  secondary_semantic_check: 11.0.0
+  verified_date: '2026-09-18'
+  authority_order:
+  - IBM DataPower CLI command reference
+  - Observed raw CFG evidence from project exports
+  - Parser discovery evidence
+  note: 'A command is promoted to object grammar only when IBM documentation describes it as creating/modifying a configuration
+    object or entering a named configuration-object mode, or when raw CFG evidence plus IBM documentation jointly establish
+    that interpretation.
 
-description: >
-  Canonical taxonomy for IBM DataPower configuration objects discovered
-  from CLI .cfg exports. This taxonomy is the authoritative source for
-  DataPower object classification, parsing, dependency discovery,
-  test discovery, modernization analysis, environment comparison,
-  Codex retrieval, skills, plans, and graph construction.
-
-# ============================================================
-# EXTERNAL TAXONOMY SOURCES
-# ============================================================
-
-taxonomy_sources:
-
+    '
+external_taxonomies:
   sensitivity:
     path: taxonomy/sensitivity.yaml
-    key: sensitivity_levels
-
-  relationships:
-    path: taxonomy/relationship_types.yaml
-    key: relationships
-
   references:
     path: taxonomy/reference_types.yaml
-    key: reference_types
-
-# ============================================================
-# GLOBAL PARSER RULES
-# ============================================================
-
-parser_rules:
-
-  syntax:
-    type: datapower_cli_configuration
-
-  object_boundary:
-    strategy: cli_block
-    block_terminator: exit
-
-  preserve_source_evidence: true
-  preserve_raw_command: true
-  preserve_raw_object_name: true
-  preserve_parent_context: true
-  preserve_line_range: true
-  preserve_raw_block_sha256: true
-
+  relationships:
+    path: taxonomy/relationship_types.yaml
+parser_contract:
+  syntax: datapower_cli_configuration
+  block_terminator: exit
+  command_case_sensitive: false
+  object_name_case_sensitive: true
+  preserve:
+  - source_file
+  - start_line
+  - end_line
+  - raw_block_sha256
+  - raw_command
+  - raw_object_name
+  - parent_context
+  - occurrence_id
+  - parser_version
   conditional_directives:
-
     recognized:
-      - "%if%"
-      - "%endif%"
-
+    - '%if%'
+    - '%endif%'
     treat_as_object: false
-    preserve_as_evidence: true
-
   comments:
-
     prefixes:
-      - "#"
+    - '#'
+    treat_as_object: false
+  property_capture: lossless
+  property_output_fields:
+  - property_name
+  - property_value
+  - property_path
+  - subcontext
+  - raw_statement
+  - raw_statement_sha256
+  - source_line
+  unclassified_definition: Only top-level statements that cannot be assigned to an object, structural context, or recognized
+    control statement.
+recognition_kinds:
+  global_named_object:
+    description: 'A named configuration object entered directly from global configuration mode.
 
-    treat_as_configuration: false
-    preserve_as_evidence: true
-
-  normalization:
-
-    command_case_sensitive: false
-    object_name_case_sensitive: true
-
-    trim_surrounding_whitespace: true
-    preserve_original_case: true
-    preserve_original_command: true
-    preserve_original_object_name: true
-
-  nesting:
-
-    track_parent_context: true
-    track_nested_exit_depth: true
-    preserve_context_stack: true
-
-# ============================================================
-# STANDARD FLAGS
-#
-# These flags describe indexing / graph behavior.
-# Sensitivity behavior comes from sensitivity.yaml.
-# ============================================================
-
-standard_flags:
-
-  defaults:
-
-    index_object: true
-    index_properties: true
-
-    searchable: true
+      '
     graph_node: true
+  contextual_named_object:
+    description: 'A named configuration object whose CLI declaration is valid as an object only inside a documented parent
+      mode. The parent context is mandatory for safe recognition because the same token can be a property elsewhere.
 
-    extract_properties: true
-    extract_references: true
-    extract_relationships: true
-    extract_endpoints: true
+      '
+    graph_node: true
+  compound_global_named_object:
+    description: 'A named configuration object whose entry command consists of multiple tokens. The parser must match the
+      full command prefix, not only the first token.
 
-    compare_across_environments: true
+      '
+    graph_node: true
+  global_singleton_configuration:
+    description: 'A singleton global configuration mode. It can be indexed as a configuration node but has no user-supplied
+      object name.
 
-    test_discovery_relevant: true
-    modernization_analysis_relevant: true
+      '
+    graph_node: true
+  attached_subconfiguration:
+    description: 'A configuration mode attached to another named object. It must not create an independent logical object
+      unless downstream requirements explicitly model it as a subconfiguration node.
 
-    codegraph_candidate: false
-
-    retain_source_evidence: true
-    retain_raw_block_hash: true
-
-    resolve_references: true
-    resolve_relationships: true
-
-    taxonomy_review_required: false
-
-# ============================================================
-# INDEXING POLICIES
-# ============================================================
-
-indexing_policies:
-
-  full:
-
-    index_object: true
-    index_properties: true
-
-    raw_content_policy: full
-
-
-  normalized:
-
-    index_object: true
-    index_properties: true
-
-    raw_content_policy: normalized_only
-
-
-  metadata_only:
-
-    index_object: true
-    index_properties: false
-
-    raw_content_policy: metadata_only
-
-
-  redacted:
-
-    index_object: true
-    index_properties: true
-
-    raw_content_policy: redacted
-
-# ============================================================
-# OBJECT CATEGORIES
-# ============================================================
-
-categories:
-
-  domain_configuration:
-    description: >
-      DataPower domain-level configuration and domain behavior.
-
-  service:
-    description: >
-      Runtime DataPower gateway or proxy service.
-
-  processing:
-    description: >
-      Processing policy, rule, matching rule, or processing action.
-
-  protocol_handler:
-    description: >
-      Front-side or transport protocol handler.
-
-  routing:
-    description: >
-      Routing, rewriting, load balancing, destination, or backend control.
-
-  xml_processing:
-    description: >
-      XML manager, schema, resolver, transformation, or document processing.
-
-  api_configuration:
-    description: >
-      API and gateway-specific configuration.
-
-  security:
-    description: >
-      Authentication, authorization, AAA, identity, or security policy.
-
-  tls:
-    description: >
-      TLS client, TLS server, or SSL proxy configuration.
-
-  cryptographic_object:
-    description: >
-      Certificate, key, identification credential, validation credential,
-      or cryptographic profile.
-
-  credential_management:
-    description: >
-      Password aliases, secret aliases, and credential references.
-
-  network:
-    description: >
-      DNS, host aliases, network interfaces, routing, or network settings.
-
-  mq:
-    description: >
-      IBM MQ connectivity, queue manager, or MQ protocol configuration.
-
-  logging_monitoring:
-    description: >
-      Logging, monitoring, audit, probe, or event configuration.
-
-  user_agent:
-    description: >
-      DataPower user-agent and outbound connection behavior.
-
-  file_management:
-    description: >
-      Filesystem or storage-related configuration.
-
-  caching:
-    description: >
-      Document cache or caching policy configuration.
-
-  database:
-    description: >
-      SQL or database connectivity configuration.
-
-  b2b:
-    description: >
-      B2B gateways, partner profiles, or B2B-specific configuration.
-
-  web_services:
-    description: >
-      SOAP, WSDL, and web-service-specific configuration.
-
-  management:
-    description: >
-      DataPower management-plane services and configuration.
-
-  access_control:
-    description: >
-      ACL or access-control policy configuration.
-
-  operational:
-    description: >
-      Runtime or operational DataPower configuration.
-
-# ============================================================
-# OBJECT TYPES
-# ============================================================
-
+      '
+    graph_node: false
+  inline_named_object:
+    description: A named configuration object declared completely on one CLI line with positional arguments.
+    graph_node: true
 object_types:
-
-  # ==========================================================
-  # DOMAIN CONFIGURATION
-  # ==========================================================
-
-  domain_settings:
-
-    canonical_type: domain_settings
-    category: domain_configuration
-
-    match:
-      commands:
-        - domain-settings
-
-    naming:
-      mode: singleton
-      generated_name: domain-settings
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    flags:
-      test_discovery_relevant: false
-      modernization_analysis_relevant: true
-      extract_endpoints: false
-
-
-  # ==========================================================
-  # CREDENTIAL MANAGEMENT
-  # ==========================================================
-
-  password_alias:
-
-    canonical_type: password_alias
-    category: credential_management
-
-    match:
-      commands:
-        - password-alias
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: credential_reference
-    indexing_policy: redacted
-
-    sensitive_properties:
-      - summary
-      - password
-      - secret
-      - value
-
-    expected_relationships: []
-
-    expected_references: []
-
-    flags:
-      test_discovery_relevant: false
-      extract_endpoints: false
-
-
-  # ==========================================================
-  # CRYPTOGRAPHIC OBJECTS
-  # ==========================================================
-
-  crypto_certificate:
-
-    canonical_type: crypto_certificate
-    category: cryptographic_object
-
-    match:
-      commands:
-        - certificate
-
-      parent_context:
-        - crypto
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: certificate_public_material
-    indexing_policy: normalized
-
-    expected_references:
-      - certificate_file
-      - public_certificate_file
-
-    expected_relationships:
-      - references_certificate_file
-
-    flags:
-      extract_endpoints: false
-
-
-  crypto_key:
-
-    canonical_type: crypto_key
-    category: cryptographic_object
-
-    match:
-      commands:
-        - key
-
-      parent_context:
-        - crypto
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: private_key_material
-    indexing_policy: redacted
-
-    expected_references:
-      - private_key_file
-      - password_alias_reference
-
-    expected_relationships:
-      - references_private_key_file
-      - uses_password_alias
-
-    flags:
-      extract_endpoints: false
-
-
-  crypto_identification_credentials:
-
-    canonical_type: crypto_identification_credentials
-    category: cryptographic_object
-
-    match:
-      commands:
-        - idcred
-        - identification-credentials
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_key
-      - uses_crypto_certificate
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: false
-
-
-  crypto_validation_credentials:
-
-    canonical_type: crypto_validation_credentials
-    category: cryptographic_object
-
-    match:
-      commands:
-        - valcred
-        - validation-credentials
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_certificate
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: false
-
-
-  crypto_profile:
-
-    canonical_type: crypto_profile
-    category: cryptographic_object
-
-    match:
-      commands:
-        - crypto-profile
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_identification_credentials
-      - uses_crypto_validation_credentials
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: false
-
-
-  # ==========================================================
-  # TLS / SSL
-  # ==========================================================
-
-  ssl_client_profile:
-
-    canonical_type: ssl_client_profile
-    category: tls
-
-    match:
-      commands:
-        - ssl-client
-        - ssl-client-profile
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_identification_credentials
-      - uses_crypto_validation_credentials
-
-    expected_references: []
-
-
-  ssl_server_profile:
-
-    canonical_type: ssl_server_profile
-    category: tls
-
-    match:
-      commands:
-        - ssl-server
-        - ssl-server-profile
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_identification_credentials
-      - uses_crypto_validation_credentials
-
-    expected_references: []
-
-
-  ssl_proxy_profile:
-
-    canonical_type: ssl_proxy_profile
-    category: tls
-
-    match:
-      commands:
-        - ssl-proxy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_identification_credentials
-      - uses_crypto_validation_credentials
-
-    expected_references: []
-
-
-  # ==========================================================
-  # SERVICES
-  # ==========================================================
-
-  multi_protocol_gateway:
-
-    canonical_type: multi_protocol_gateway
-    category: service
-
-    match:
-      commands:
-        - mpgw
-        - multiprotocol-gateway
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_processing_policy
-      - uses_xml_manager
-      - uses_front_side_handler
-      - uses_ssl_client_profile
-      - uses_load_balancer_group
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-      - configuration_file
-
-    flags:
-      test_discovery_relevant: true
-      modernization_analysis_relevant: true
-      extract_endpoints: true
-
-
-  web_service_proxy:
-
-    canonical_type: web_service_proxy
-    category: web_services
-
-    match:
-      commands:
-        - wsgw
-        - web-service-proxy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - references_wsdl
-      - uses_processing_policy
-      - uses_xml_manager
-      - uses_front_side_handler
-      - uses_ssl_client_profile
-      - uses_load_balancer_group
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-      - wsdl_file
-      - configuration_file
-
-
-  xml_firewall:
-
-    canonical_type: xml_firewall
-    category: service
-
-    match:
-      commands:
-        - xmlfirewall
-        - xml-firewall
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_processing_policy
-      - uses_xml_manager
-      - uses_front_side_handler
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-
-
-  tcp_proxy:
-
-    canonical_type: tcp_proxy
-    category: service
-
-    match:
-      commands:
-        - tcp-proxy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - routes_to_backend
-
-    expected_references: []
-
-
-  web_application_firewall:
-
-    canonical_type: web_application_firewall
-    category: service
-
-    match:
-      commands:
-        - web-app-firewall
-        - web-application-firewall
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_processing_policy
-      - uses_front_side_handler
-      - uses_ssl_client_profile
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-
-
-  # ==========================================================
-  # PROCESSING
-  # ==========================================================
-
   style_policy:
-
     canonical_type: style_policy
     category: processing
-
-    match:
-      commands:
-        - stylepolicy
-        - style-policy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - contains_processing_rule
-
-    expected_references: []
-
-
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - stylepolicy
+      name_argument: 1
+    ibm_term: processing policy
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
   processing_rule:
-
     canonical_type: processing_rule
     category: processing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - rule
+      name_argument: 1
+      trailing_qualifiers:
+        allowed:
+        - request
+        - response
+    ibm_term: processing rule
+    project_status: observed_after_parser_fix
+    parser_priority: high
+    notes:
+    - 'Global `rule` creates/enters a reusable processing-rule object. Inside stylepolicy mode, `rule`, `request-rule`, `response-rule`,
+      `error-rule`, and `match` can instead assign or create policy-specific rule associations. Context therefore matters.
 
-    match:
-      commands:
-        - stylepolicy-rule
-        - processing-rule
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_matching_rule
-      - contains_processing_action
-
-    expected_references: []
-
-
+      '
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  processing_action:
+    canonical_type: processing_action
+    category: processing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - action
+      name_argument: 1
+    ibm_term: processing action
+    project_status: observed
+    parser_priority: high
+    replaces_previous_canonical_type:
+    - style_policy_action
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
   matching_rule:
-
     canonical_type: matching_rule
     category: processing
-
-    match:
-      commands:
-        - matching
-        - matching-rule
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-
-    expected_references: []
-
-
-  style_policy_action:
-
-    canonical_type: style_policy_action
-    category: processing
-
-    match:
-      commands:
-        - stylepolicy-action
-        - processing-action
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_references:
-      - local_file
-      - xslt_file
-      - gatewayscript_file
-
-    expected_relationships:
-      - executes_xslt
-      - executes_gatewayscript
-      - references_file
-      - routes_to_backend
-      - uses_sql_data_source
-      - executes_sql_via_data_source
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # XML PROCESSING
-  # ==========================================================
-
-  xml_manager:
-
-    canonical_type: xml_manager
-    category: xml_processing
-
-    match:
-      commands:
-        - xml-manager
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_user_agent
-      - uses_document_cache_policy
-
-    expected_references:
-      - local_file
-      - xsd_file
-
-
-  schema_exception_map:
-
-    canonical_type: schema_exception_map
-    category: xml_processing
-
-    match:
-      commands:
-        - schema-exception-map
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - references_schema
-
-    expected_references:
-      - xsd_file
-      - local_file
-
-
-  document_cache_policy:
-
-    canonical_type: document_cache_policy
-    category: caching
-
-    match:
-      commands:
-        - document-cache-policy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-
-  # ==========================================================
-  # USER AGENT
-  # ==========================================================
-
-  user_agent:
-
-    canonical_type: user_agent
-    category: user_agent
-
-    match:
-      commands:
-        - user-agent
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_ssl_client_profile
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # ROUTING
-  # ==========================================================
-
-  load_balancer_group:
-
-    canonical_type: load_balancer_group
-    category: routing
-
-    match:
-      commands:
-        - loadbalancer-group
-        - load-balancer-group
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - contains_backend_member
-      - routes_to_backend
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  url_rewrite_policy:
-
-    canonical_type: url_rewrite_policy
-    category: routing
-
-    match:
-      commands:
-        - urlrewrite
-        - url-rewrite-policy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - rewrites_to
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-
-
-  url_map:
-
-    canonical_type: url_map
-    category: routing
-
-    match:
-      commands:
-        - urlmap
-        - url-map
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - routes_to_backend
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # PROTOCOL HANDLERS
-  # ==========================================================
-
-  http_source_protocol_handler:
-
-    canonical_type: http_source_protocol_handler
-    category: protocol_handler
-
-    match:
-      commands:
-        - http-source
-        - http-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  https_source_protocol_handler:
-
-    canonical_type: https_source_protocol_handler
-    category: protocol_handler
-
-    match:
-      commands:
-        - https-source
-        - https-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_ssl_server_profile
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  mq_source_protocol_handler:
-
-    canonical_type: mq_source_protocol_handler
-    category: mq
-
-    match:
-      commands:
-        - mq-source
-        - mq-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_mq_queue_manager
-
-    expected_references:
-      - mq_client_configuration
-
-
-  ftp_source_protocol_handler:
-
-    canonical_type: ftp_source_protocol_handler
-    category: protocol_handler
-
-    match:
-      commands:
-        - ftp-source
-        - ftp-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  sftp_source_protocol_handler:
-
-    canonical_type: sftp_source_protocol_handler
-    category: protocol_handler
-
-    match:
-      commands:
-        - sftp-source
-        - sftp-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_password_alias
-      - uses_crypto_key
-
-    expected_references:
-      - password_alias_reference
-      - private_key_file
-
-    flags:
-      extract_endpoints: true
-
-
-  tcp_source_protocol_handler:
-
-    canonical_type: tcp_source_protocol_handler
-    category: protocol_handler
-
-    match:
-      commands:
-        - tcp-source
-        - tcp-source-protocol-handler
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # MQ
-  # ==========================================================
-
-  mq_queue_manager:
-
-    canonical_type: mq_queue_manager
-    category: mq
-
-    match:
-      commands:
-        - mq-qm
-        - mq-queue-manager
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_references:
-      - password_alias_reference
-      - mq_client_configuration
-
-    expected_relationships:
-      - uses_password_alias
-      - references_mq_client_configuration
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # SECURITY / AAA
-  # ==========================================================
-
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - matching
+      name_argument: 1
+    ibm_term: matching rule
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
   aaa_policy:
-
     canonical_type: aaa_policy
     category: security
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - aaapolicy
+      name_argument: 1
+    ibm_term: AAA policy
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+    command_aliases:
+    - tokens:
+      - aaa-policy
+      evidence: observed_project_mapping
+  multi_protocol_gateway:
+    canonical_type: multi_protocol_gateway
+    category: service
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - mpgw
+      name_argument: 1
+    ibm_term: multiprotocol gateway
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  xml_firewall:
+    canonical_type: xml_firewall
+    category: service
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - xmlfirewall
+      name_argument: 1
+    ibm_term: XML firewall
+    project_status: documented_not_observed_in_primary_cfg
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  web_service_proxy:
+    canonical_type: web_service_proxy
+    category: service
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - wsgw
+      name_argument: 1
+    ibm_term: web service proxy
+    project_status: documented_not_observed_in_primary_cfg
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  xml_manager:
+    canonical_type: xml_manager
+    category: xml_processing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - xml-manager
+      name_argument: 1
+    ibm_term: XML manager
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+    command_aliases:
+    - tokens:
+      - xmlmgr
+      evidence: observed_stg_cfg
+  user_agent:
+    canonical_type: user_agent
+    category: outbound_transport
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - user-agent
+      name_argument: 1
+    ibm_term: user agent
+    project_status: observed
+    parser_priority: high
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  load_balancer_group:
+    canonical_type: load_balancer_group
+    category: routing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - loadbalancer-group
+      name_argument: 1
+    ibm_term: load balancer group
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  url_rewrite_policy:
+    canonical_type: url_rewrite_policy
+    category: routing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - urlrewrite
+      name_argument: 1
+    ibm_term: URL rewrite policy
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  url_map:
+    canonical_type: url_map
+    category: routing
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - urlmap
+      name_argument: 1
+    ibm_term: URL map
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  http_source_protocol_handler:
+    canonical_type: http_source_protocol_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - source-http
+      name_argument: 1
+    ibm_term: HTTP handler
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  https_source_protocol_handler:
+    canonical_type: https_source_protocol_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - source-https
+      name_argument: 1
+    ibm_term: HTTPS handler
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  mq_source_protocol_handler:
+    canonical_type: mq_source_protocol_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - source-mq
+      name_argument: 1
+    ibm_term: IBM MQ handler
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  raw_source_protocol_handler:
+    canonical_type: raw_source_protocol_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - source-raw
+      name_argument: 1
+    ibm_term: raw protocol handler
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  crypto_certificate:
+    canonical_type: crypto_certificate
+    category: cryptographic_object
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - certificate
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: certificate object
+    project_status: observed
+    parser_priority: critical
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  crypto_key:
+    canonical_type: crypto_key
+    category: cryptographic_object
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - key
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: private key object
+    project_status: observed
+    parser_priority: critical
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  crypto_identification_credentials:
+    canonical_type: crypto_identification_credentials
+    category: cryptographic_object
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - idcred
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: crypto identification credentials
+    project_status: observed
+    parser_priority: critical
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  crypto_validation_credentials:
+    canonical_type: crypto_validation_credentials
+    category: cryptographic_object
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - valcred
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: crypto validation credentials
+    project_status: observed
+    parser_priority: critical
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  tls_client_profile:
+    canonical_type: tls_client_profile
+    category: tls
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - ssl-client
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: TLS client profile
+    project_status: observed
+    parser_priority: critical
+    replaces_previous_canonical_type:
+    - ssl_client_profile
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  tls_server_profile:
+    canonical_type: tls_server_profile
+    category: tls
+    recognition_kind: contextual_named_object
+    command:
+      tokens:
+      - ssl-server
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: TLS server profile
+    project_status: observed
+    parser_priority: critical
+    replaces_previous_canonical_type:
+    - ssl_server_profile
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  mq_queue_manager_legacy:
+    canonical_type: mq_queue_manager_legacy
+    category: mq
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - mq-qm
+      name_argument: 1
+    ibm_term: IBM MQ queue manager (deprecated)
+    lifecycle: deprecated
+    project_status: observed
+    parser_priority: high
+    notes:
+    - 'Keep distinct from IBM MQ v9+ queue manager because IBM documents them as different DataPower object classes with overlapping
+      properties.
 
-    match:
-      commands:
-        - aaa
-        - aaa-policy
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_ssl_client_profile
-      - uses_password_alias
-
-    expected_references:
-      - password_alias_reference
-      - local_file
-
-
-  access_control_list:
-
-    canonical_type: access_control_list
-    category: access_control
-
-    match:
-      commands:
-        - access-control-list
-        - acl
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-
-  # ==========================================================
-  # DATABASE
-  # ==========================================================
-
+      '
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  mq_v9_queue_manager:
+    canonical_type: mq_v9_queue_manager
+    category: mq
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - idg-mq-qm
+      name_argument: 1
+    ibm_term: IBM MQ v9+ queue manager
+    lifecycle: current
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  mq_v9_queue_manager_group:
+    canonical_type: mq_v9_queue_manager_group
+    category: mq
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - idg-mq-qm-group
+      name_argument: 1
+    ibm_term: IBM MQ v9+ queue manager group
+    lifecycle: current
+    project_status: documented
+    parser_priority: low
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
   sql_data_source:
-
     canonical_type: sql_data_source
     category: database
-
-    match:
-      commands:
-        - sql-data-source
-        - sql-source
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: credential_reference
-    indexing_policy: redacted
-
-    expected_references:
-      - password_alias_reference
-
-    expected_relationships:
-      - uses_password_alias
-      - routes_to_database
-
-    flags:
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # B2B
-  # ==========================================================
-
-  b2b_gateway:
-
-    canonical_type: b2b_gateway
-    category: b2b
-
-    match:
-      commands:
-        - b2b-gateway
-        - b2bgw
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_b2b_profile
-      - uses_ssl_client_profile
-      - routes_to_backend
-
-    expected_references:
-      - local_file
-
-
-  b2b_profile:
-
-    canonical_type: b2b_profile
-    category: b2b
-
-    match:
-      commands:
-        - b2b-profile
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_crypto_identification_credentials
-      - uses_crypto_validation_credentials
-
-    expected_references: []
-
-
-  # ==========================================================
-  # LOGGING / MONITORING
-  # ==========================================================
-
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - sql-source
+      name_argument: 1
+    ibm_term: SQL data source
+    project_status: documented_not_observed_in_primary_cfg
+    availability_note: Requires SQL-ODBC feature
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: core
+    capture_properties: all
+  access_control_list:
+    canonical_type: access_control_list
+    category: access_control
+    recognition_kind: global_named_object
+    command:
+      tokens:
+      - acl
+      name_argument: 1
+    ibm_term: access control list
+    project_status: documented
+    parser_priority: medium
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
   log_target:
-
     canonical_type: log_target
     category: logging_monitoring
+    recognition_kind: compound_global_named_object
+    command:
+      tokens:
+      - logging
+      - target
+      name_argument: 2
+    ibm_term: log target
+    project_status: documented
+    parser_priority: medium
+    notes:
+    - '`logging` alone is not sufficient object identity. Match the compound entry command `logging target <name>`.
 
-    match:
-      commands:
-        - logging
-        - log-target
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - routes_logs_to
-
-    expected_references: []
-
-    flags:
-      test_discovery_relevant: false
-      extract_endpoints: true
-
-
-  log_label:
-
-    canonical_type: log_label
-    category: logging_monitoring
-
-    match:
-      commands:
-        - log-label
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships: []
-    expected_references: []
-
-    flags:
-      test_discovery_relevant: false
-
-
-  # ==========================================================
-  # MANAGEMENT
-  # ==========================================================
-
-  web_management:
-
-    canonical_type: web_management
-    category: management
-
-    match:
-      commands:
-        - web-mgmt
-        - web-management
-
-    naming:
-      mode: singleton
-      generated_name: web-management
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_ssl_server_profile
-
-    expected_references: []
-
-    flags:
-      test_discovery_relevant: false
-      extract_endpoints: true
-
-
-  xml_management:
-
-    canonical_type: xml_management
-    category: management
-
-    match:
-      commands:
-        - xml-mgmt
-        - xml-management
-
-    naming:
-      mode: singleton
-      generated_name: xml-management
-
-    sensitivity: security_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - uses_ssl_server_profile
-
-    expected_references: []
-
-    flags:
-      test_discovery_relevant: false
-      extract_endpoints: true
-
-
-  # ==========================================================
-  # NETWORK
-  # ==========================================================
-
+      '
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  domain_settings:
+    canonical_type: domain_settings
+    category: domain_configuration
+    recognition_kind: global_singleton_configuration
+    command:
+      tokens:
+      - domain-settings
+      generated_name: domain-settings
+    ibm_term: domain settings
+    project_status: documented
+    parser_priority: low
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
   dns_settings:
-
     canonical_type: dns_settings
     category: network
+    recognition_kind: global_singleton_configuration
+    command:
+      tokens:
+      - dns
+      generated_name: dns
+    ibm_term: DNS settings
+    project_status: documented
+    parser_priority: low
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  xml_management:
+    canonical_type: xml_management
+    category: management
+    recognition_kind: global_singleton_configuration
+    command:
+      tokens:
+      - xml-mgmt
+      generated_name: xml-mgmt
+    ibm_term: XML management interface
+    project_status: documented
+    parser_priority: low
+    declaration_form: block
+    architecture_relevance: supporting
+    capture_properties: all
+  password_alias:
+    canonical_type: password_alias
+    category: security
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - password-alias
+      name_argument: 1
+    ibm_term: password alias
+    project_status: observed
+    parser_priority: high
+    architecture_relevance: core
+    capture_properties: all
+  policy_attachments:
+    canonical_type: policy_attachments
+    category: web_services_policy
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - policy-attachments
+      name_argument: 1
+    ibm_term: policy attachments
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  tcp_proxy:
+    canonical_type: tcp_proxy
+    category: service
+    recognition_kind: inline_named_object
+    declaration_form: inline
+    command:
+      tokens:
+      - tcpproxy
+      name_argument: 1
+    inline_arguments:
+    - position: 2
+      property_name: local-address
+    - position: 3
+      property_name: local-port
+    - position: 4
+      property_name: destination-address
+    - position: 5
+      property_name: destination-port
+    - position: 6
+      property_name: timeout
+    - position: 7
+      property_name: priority
+      optional: true
+    ibm_term: TCP Proxy
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  web_service_proxy_processing_rule:
+    canonical_type: web_service_proxy_processing_rule
+    category: processing
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - wsm-rule
+      name_argument: 1
+    ibm_term: WS-proxy processing rule
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  slm_policy:
+    canonical_type: slm_policy
+    category: traffic_governance
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - slm-policy
+      name_argument: 1
+    ibm_term: SLM policy
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_rule:
+    canonical_type: api_rule
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-rule
+      name_argument: 1
+    ibm_term: API rule
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  gateway_peering:
+    canonical_type: gateway_peering
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - gateway-peering
+      name_argument: 1
+    ibm_term: gateway peering instance
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  assembly_function:
+    canonical_type: assembly_function
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - assembly-function
+      name_argument: 1
+    ibm_term: assembly function
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  assembly_function_call:
+    canonical_type: assembly_function_call
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - assembly-function-call
+      name_argument: 1
+    ibm_term: function call assembly action
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  mq_v9_source_handler:
+    canonical_type: mq_v9_source_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - source-idg-mq
+      name_argument: 1
+    ibm_term: IBM MQ v9+ handler
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  sftp_server_handler:
+    canonical_type: sftp_server_handler
+    category: protocol_handler
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - source-ssh-server
+      name_argument: 1
+    ibm_term: SFTP server handler
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  ssh_client_profile:
+    canonical_type: ssh_client_profile
+    category: security
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - sshclientprofile
+      name_argument: 1
+    ibm_term: SSH client profile
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+    notes:
+    - IBM documents this under crypto commands; STG export evidence shows the declaration at top-level, so the parser accepts
+      the observed export form.
+  jwt_generator:
+    canonical_type: jwt_generator
+    category: security
+    recognition_kind: contextual_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - jwt-generator
+      name_argument: 1
+    required_parent_context:
+    - crypto
+    ibm_term: JWT Generator
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_connect_gateway_service:
+    canonical_type: api_connect_gateway_service
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - apic-gw-service
+      name_argument: 1
+    ibm_term: API Connect gateway service
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_probe:
+    canonical_type: api_probe
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - apiprobe
+      name_argument: 1
+    ibm_term: API probe
+    project_status: observed_and_ibm_documented
+    architecture_relevance: supporting
+    capture_properties: all
+  deployment_policy:
+    canonical_type: deployment_policy
+    category: deployment
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - deployment-policy
+      name_argument: 1
+    ibm_term: deployment policy
+    project_status: observed_and_ibm_documented
+    architecture_relevance: supporting
+    capture_properties: all
+  document_crypto_map:
+    canonical_type: document_crypto_map
+    category: security
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - document-crypto-map
+      name_argument: 1
+    ibm_term: document crypto map
+    project_status: observed_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+  parse_settings:
+    canonical_type: parse_settings
+    category: processing
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - parse-settings
+      name_argument: 1
+    ibm_term: parse settings
+    project_status: observed_and_ibm_documented
+    architecture_relevance: supporting
+    capture_properties: all
+  api_result_action:
+    canonical_type: api_result_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-result
+      name_argument: 1
+    ibm_term: Result API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_routing_action:
+    canonical_type: api_routing_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-routing
+      name_argument: 1
+    ibm_term: Routing API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_security_action:
+    canonical_type: api_security_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-security
+      name_argument: 1
+    ibm_term: Security API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_cors_action:
+    canonical_type: api_cors_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-cors
+      name_argument: 1
+    ibm_term: CORS API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_client_identification_action:
+    canonical_type: api_client_identification_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-client-identification
+      name_argument: 1
+    ibm_term: Client identification API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_rate_limit_action:
+    canonical_type: api_rate_limit_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-rate-limit
+      name_argument: 1
+    ibm_term: API rate limit action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_final_action:
+    canonical_type: api_final_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-final
+      name_argument: 1
+    ibm_term: Final API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  api_execute_action:
+    canonical_type: api_execute_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - api-execute
+      name_argument: 1
+    ibm_term: Execute API action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  assembly_html_page_action:
+    canonical_type: assembly_html_page_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - assembly-html-page
+      name_argument: 1
+    ibm_term: HTML assembly action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  assembly_rate_limit_action:
+    canonical_type: assembly_rate_limit_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - assembly-rate-limit
+      name_argument: 1
+    ibm_term: Rate limit assembly action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  assembly_wsdl_action:
+    canonical_type: assembly_wsdl_action
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - assembly-wsdl
+      name_argument: 1
+    ibm_term: WSDL assembly action
+    project_status: observed_and_ibm_global_command_documented
+    architecture_relevance: core
+    capture_properties: all
+  gateway_peering_manager:
+    canonical_type: gateway_peering_manager
+    category: api_gateway
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - gateway-peering-manager
+      name_argument: 1
+    ibm_term: gateway peering manager
+    project_status: observed_and_ibm_documented
+    architecture_relevance: supporting
+    capture_properties: all
+  web_service_proxy_processing_policy:
+    canonical_type: web_service_proxy_processing_policy
+    category: processing
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - wsm-stylepolicy
+      name_argument: 1
+    ibm_term: WS-proxy processing policy
+    project_status: observed_in_stg_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+    notes:
+    - Observed in STG as wsm-stylepolicy. Treat as a distinct WS-Proxy processing-policy object; do not alias to generic style_policy.
+  web_service_proxy_endpoint_rewrite:
+    canonical_type: web_service_proxy_endpoint_rewrite
+    category: routing
+    recognition_kind: global_named_object
+    declaration_form: block
+    command:
+      tokens:
+      - wsm-endpointrewrite
+      name_argument: 1
+    ibm_term: WS-proxy endpoint rewrite policy
+    project_status: observed_in_stg_and_ibm_documented
+    architecture_relevance: core
+    capture_properties: all
+    notes:
+    - Observed in STG as wsm-endpointrewrite. Preserve listener/backend/remote-endpoint configuration as owned properties
+      after reparse.
+non_object_configuration_modes:
+  crypto:
+    command:
+      tokens:
+      - crypto
+    classification: structural_parent_context
+    create_logical_object: false
+    purpose: 'Parent configuration mode for crypto resources. Preserve it in parent_context but do not emit a `crypto` object
+      node.
 
-    match:
-      commands:
-        - dns
+      '
+  documentcache:
+    command:
+      tokens:
+      - documentcache
+      bound_argument: 1
+    classification: attached_subconfiguration
+    create_logical_object: false
+    bound_to_type: xml_manager
+    capture_as_subcontext: true
+    purpose: Preserve document-cache settings under the owning XML manager; do not emit an independent architecture object.
+context_sensitive_tokens:
+  ssl-client:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  ssl-server:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  idcred:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  valcred:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  certificate:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  key:
+    object_only_when_parent_context:
+    - crypto
+    otherwise_interpret_as: property_or_object_reference
+  rule:
+    object_when:
+    - global_mode
+    otherwise_interpret_as: policy_member_or_processing_action_reference
+  action:
+    object_when:
+    - global_mode
+    otherwise_interpret_as: processing_rule_member_reference
+  matching:
+    object_when:
+    - global_mode
+    otherwise_interpret_as: property_or_syntax_element
+quarantined_previous_entries:
+  stylepolicy-rule:
+    previous_target: processing_rule
+    reason: not_the_documented_global_object_command
+    replacement: rule
+  processing-rule:
+    previous_target: processing_rule
+    reason: invented_alias_not_used_as_documented_global_cli_entry
+    replacement: rule
+  stylepolicy-action:
+    previous_target: style_policy_action
+    reason: not_the_documented_global_object_command
+    replacement: action
+  processing-action:
+    previous_target: style_policy_action
+    reason: descriptive_term_not_documented_global_cli_entry
+    replacement: action
+  ssl-client-profile:
+    previous_target: ssl_client_profile
+    reason: descriptive_alias_not_required_for_cfg_parser
+    replacement: crypto -> ssl-client
+  ssl-server-profile:
+    previous_target: ssl_server_profile
+    reason: descriptive_alias_not_required_for_cfg_parser
+    replacement: crypto -> ssl-server
+  identification-credentials:
+    previous_target: crypto_identification_credentials
+    reason: descriptive_alias_not_required_for_cfg_parser
+    replacement: crypto -> idcred
+  validation-credentials:
+    previous_target: crypto_validation_credentials
+    reason: descriptive_alias_not_required_for_cfg_parser
+    replacement: crypto -> valcred
+  document-cache-policy:
+    previous_target: document_cache_policy
+    reason: 'IBM CLI documents `documentcache <manager>` as configuration of the document cache belonging to an XML manager,
+      not creation of an independently named document-cache-policy object.
 
-    naming:
-      mode: singleton
-      generated_name: dns-settings
+      '
+    replacement: non_object_configuration_modes.documentcache
+  mq-queue-manager:
+    previous_target: mq_queue_manager
+    reason: descriptive_alias_hides_two_distinct_ibm_object_classes
+    replacement:
+    - mq-qm
+    - idg-mq-qm
+  http-source:
+    previous_target: http_source_protocol_handler
+    reason: token_order_incorrect
+    replacement: source-http
+  https-source:
+    previous_target: https_source_protocol_handler
+    reason: token_order_incorrect
+    replacement: source-https
+  mq-source:
+    previous_target: mq_source_protocol_handler
+    reason: token_order_incorrect
+    replacement: source-mq
+  sql-data-source:
+    previous_target: sql_data_source
+    reason: descriptive_alias_not_documented_cfg_entry
+    replacement: sql-source
+  load-balancer-group:
+    previous_target: load_balancer_group
+    reason: descriptive_alias_not_documented_cfg_entry
+    replacement: loadbalancer-group
+  url-rewrite-policy:
+    previous_target: url_rewrite_policy
+    reason: descriptive_alias_not_documented_cfg_entry
+    replacement: urlrewrite
+  url-map:
+    previous_target: url_map
+    reason: descriptive_alias_not_documented_cfg_entry
+    replacement: urlmap
+  logging:
+    previous_target: log_target
+    reason: incomplete_compound_command
+    replacement: logging target
+verification_queue:
+- previous_canonical_type: crypto_profile
+  reason: 'Legacy DataPower generations use crypto profile concepts, but the primary project CFG and current TLS profile grammar
+    must be checked before enabling an object mapping.
 
-    sensitivity: internal_configuration
-    indexing_policy: normalized
+    '
+- previous_canonical_type: ssl_proxy_profile
+  reason: 'Do not equate TLS proxy (`sslforwarder`) with a profile object without evidence from the target firmware/export
+    syntax.
 
-    expected_relationships: []
-    expected_references: []
+    '
+- previous_canonical_type: web_application_firewall
+  reason: verify exact command and firmware availability before enabling
+- previous_canonical_type: b2b_gateway
+  reason: verify exact command against target firmware/export
+- previous_canonical_type: b2b_profile
+  reason: IBM documents b2b-profile; enable when project evidence requires it
+- previous_canonical_type: schema_exception_map
+  reason: verify exact CLI object command before enabling
+- previous_canonical_type: ftp_source_protocol_handler
+  reason: 'Do not synthesize `source-ftp`; DataPower front-side service handlers documented for MPGW include source-http/source-https/source-mq/source-raw.
 
-    flags:
-      test_discovery_relevant: false
-      extract_endpoints: true
+    '
+- previous_canonical_type: sftp_source_protocol_handler
+  reason: verify exact front-side handler object, if present in raw export
+- previous_canonical_type: tcp_source_protocol_handler
+  reason: 'Distinguish raw/stateful TCP handlers from a descriptive `source-tcp` alias before enabling.
 
-
-  host_alias:
-
-    canonical_type: host_alias
-    category: network
-
-    match:
-      commands:
-        - host-alias
-
-    naming:
-      mode: quoted_argument
-
-    sensitivity: internal_configuration
-    indexing_policy: normalized
-
-    expected_relationships:
-      - resolves_to
-
-    expected_references: []
-
-    flags:
-      extract_endpoints: true
-
-
-# ============================================================
-# UNCLASSIFIED OBJECT HANDLING
-#
-# These are precise technical statuses.
-# Never classify an object as:
-# unknown / other / misc / various / generic.
-# ============================================================
-
-unclassified_object_handling:
-
-  create_index_record: true
-  create_graph_node: true
-
-  preserve:
-
-    - environment
-    - source_file
-
-    - raw_command
-    - raw_object_name
-    - raw_parent_context
-
-    - line_start
-    - line_end
-
-    - raw_block_sha256
-
-    - discovered_properties
-    - discovered_references
-    - discovered_endpoints
-
-  prohibited_labels:
-
-    - unknown
-    - other
-    - others
-    - misc
-    - miscellaneous
-    - many
-    - different
-    - various
-    - generic
-
-  statuses:
-
-    unclassified_due_to_taxonomy_gap:
-
-      description: >
-        Parser recognized a valid configuration object block,
-        but its raw DataPower command is not currently defined
-        in datapower_objects.yaml.
-
-      actions:
-        - preserve_raw_command
-        - preserve_raw_object_name
-        - preserve_source_evidence
-        - create_taxonomy_review_candidate
-
-
-    unclassified_due_to_parent_context_gap:
-
-      description: >
-        Command exists in the taxonomy but the observed parent
-        context does not match any currently defined context.
-
-      actions:
-        - preserve_raw_command
-        - preserve_raw_parent_context
-        - preserve_source_evidence
-        - create_taxonomy_review_candidate
-
-
-    unclassified_due_to_parser_gap:
-
-      description: >
-        Configuration syntax appears to contain an object,
-        but the parser cannot reliably determine the complete
-        object block or nesting boundaries.
-
-      actions:
-        - preserve_raw_lines
-        - preserve_source_evidence
-        - create_parser_review_candidate
-
-
-    unclassified_due_to_ambiguous_command:
-
-      description: >
-        Raw command matches more than one canonical object type
-        and the available context is insufficient to resolve
-        the canonical classification safely.
-
-      actions:
-        - preserve_all_candidate_types
-        - preserve_raw_command
-        - preserve_parent_context
-        - preserve_source_evidence
-        - create_taxonomy_review_candidate
-
-
-    unclassified_due_to_missing_object_name:
-
-      description: >
-        Object block was detected but no reliable object name
-        could be extracted using the configured naming rule.
-
-      actions:
-        - preserve_raw_command
-        - preserve_source_evidence
-        - generate_temporary_evidence_id
-
-
-# ============================================================
-# CLASSIFICATION OUTPUT CONTRACT
-# ============================================================
-
+    '
+- previous_canonical_type: log_label
+  reason: verify whether this is an independent named object in target firmware
+- previous_canonical_type: web_management
+  reason: verify exact CLI mode and singleton behavior in target firmware
+classification_statuses:
+  classified:
+    meaning: matched verified grammar and required context
+  unclassified_due_to_taxonomy_gap:
+    meaning: valid object-like block observed but no verified taxonomy rule exists
+  unclassified_due_to_parent_context_gap:
+    meaning: command token known but required parent context is missing or different
+  unclassified_due_to_ambiguous_command:
+    meaning: token has object and property meanings and context is insufficient
+  unclassified_due_to_parser_gap:
+    meaning: object boundary or nesting could not be determined reliably
+  unclassified_due_to_missing_object_name:
+    meaning: verified named-object command found but name could not be extracted
 classification_output:
-
   required_fields:
-
-    - object_id
-
-    - environment
-    - source_file
-
-    - raw_command
-    - raw_object_name
-    - raw_parent_context
-
-    - canonical_type
-    - category
-
-    - classification_status
-    - classification_reason
-    - classification_rule
-
-    - line_start
-    - line_end
-
-    - sensitivity_level
-
-    - indexing_policy
-
-    - index_object
-    - index_properties
-
-    - searchable
-    - graph_node
-
-    - extract_properties
-    - extract_references
-    - extract_relationships
-    - extract_endpoints
-
-    - resolve_references
-    - resolve_relationships
-
-    - compare_across_environments
-
-    - test_discovery_relevant
-    - modernization_analysis_relevant
-
-    - codegraph_candidate
-
-    - retain_source_evidence
-    - retain_raw_block_hash
-
-    - raw_block_sha256
-
-
-  classified_status:
-    value: classified
-
-
-  stable_object_id:
-
-    format: >
-      obj:{environment}:{canonical_type}:{normalized_object_name}
-
-
-  unclassified_stable_object_id:
-
-    format: >
-      obj:{environment}:{classification_status}:{raw_command}:{normalized_object_name}
-
-# ============================================================
-# REFERENCE RESOLUTION RULES
-# ============================================================
-
-reference_resolution:
-
-  require_source_evidence: true
-
-  preserve_raw_reference: true
-  preserve_normalized_reference: true
-
-  preserve_reference_scheme: true
-
-  resolve_against_file_inventory: true
-
-  unresolved_reference_behavior:
-
-    create_reference_record: true
-
-    classification_status:
-      unresolved_due_to_missing_target
-
-    preserve:
-      - source_object_id
-      - raw_reference
-      - reference_type
-      - source_file
-      - source_line
-
-
-# ============================================================
-# RELATIONSHIP RESOLUTION RULES
-# ============================================================
-
-relationship_resolution:
-
-  require_source_evidence: true
-
-  infer_from_name_only: false
-
-  preserve_property_name: true
-  preserve_property_value: true
-
-  preserve_source_file: true
-  preserve_source_line: true
-
-  unresolved_target_behavior:
-
-    create_relationship_record: true
-
-    classification_status:
-      unresolved_due_to_missing_target
-
-  ambiguous_target_behavior:
-
-    create_relationship_record: true
-
-    classification_status:
-      unresolved_due_to_ambiguous_target
-
-    preserve_all_candidates: true
-
-
-# ============================================================
-# TAXONOMY REVIEW OUTPUT
-# ============================================================
-
-taxonomy_review:
-
-  enabled: true
-
-  generate_candidates_for:
-
-    - unclassified_due_to_taxonomy_gap
-    - unclassified_due_to_parent_context_gap
-    - unclassified_due_to_parser_gap
-    - unclassified_due_to_ambiguous_command
-    - unclassified_due_to_missing_object_name
-
-  group_candidates_by:
-
-    - raw_command
-    - raw_parent_context
-
-  preserve_occurrence_count: true
-
-  preserve_example_evidence: true
-
-  preserve_all_source_locations: true
-
-
-# ============================================================
-# VALIDATION RULES
-# ============================================================
-
-validation:
-
-  fail_on_duplicate_canonical_type: true
-
-  fail_on_duplicate_match_rule_with_same_context: true
-
-  fail_on_missing_category: true
-  fail_on_undefined_category: true
-
-  fail_on_missing_sensitivity: true
-
-  fail_on_undefined_external_sensitivity_level: true
-
-  sensitivity_taxonomy_source:
-    path: taxonomy/sensitivity.yaml
-    key: sensitivity_levels
-
-  fail_on_missing_indexing_policy: true
-  fail_on_undefined_indexing_policy: true
-
-  fail_on_undefined_reference_type: true
-
-  reference_taxonomy_source:
-    path: taxonomy/reference_types.yaml
-    key: reference_types
-
-  fail_on_undefined_relationship_type: true
-
-  relationship_taxonomy_source:
-    path: taxonomy/relationship_types.yaml
-    key: relationships
-
-  fail_on_prohibited_classification_label: true
-
-  allow_unclassified_objects: true
-
-  require_unclassified_reason: true
-  require_source_evidence_for_unclassified: true
-
-  require_source_evidence_for_relationships: true
-  require_source_evidence_for_references: true
-
-  prohibit_relationship_inference_from_object_name_only: true
+  - object_id
+  - occurrence_id
+  - environment
+  - source_file
+  - start_line
+  - end_line
+  - raw_block_sha256
+  - raw_command
+  - raw_object_name
+  - parent_context
+  - canonical_type
+  - category
+  - recognition_kind
+  - classification_status
+  - classification_reason
+  - parser_version
+identity:
+  logical_object_id: obj:{environment}:{canonical_type}:{normalized_name}
+  occurrence_id: occ:{environment}:{source_file}:{start_line}:{end_line}
+  preserve_all_occurrences: true
+  deduplicate_physical_evidence: false
