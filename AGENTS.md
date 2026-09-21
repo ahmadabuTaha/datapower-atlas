@@ -745,3 +745,40 @@ Atlas must not silently make the architecture appear cleaner than the source imp
 The purpose of Atlas is faithful reconstruction first.
 
 Modernization decisions come later.
+
+## 27. Evidence Retrieval Strategy
+
+Codex must use generated indexes as the primary retrieval layer.
+
+Do not load raw configuration broadly unless required.
+
+Default investigation order:
+
+1. service journey index
+2. operation journey index
+3. relationship index
+4. endpoint index
+5. file/dependency index
+6. object/property index
+7. raw CFG evidence when verification or ambiguity requires it
+
+Indexes are retrieval aids, not the authoritative source.
+
+Raw configuration remains the final authority.
+--
+## 28. Skill Integration Contract
+
+Skills form a staged evidence pipeline.
+
+A downstream skill should consume the smallest validated output
+from the upstream skill instead of repeating upstream investigation.
+
+No downstream skill may strengthen evidence certainty.
+
+confirmed may remain confirmed.
+
+candidate must remain candidate unless new evidence is collected.
+
+unresolved must remain unresolved unless explicitly resolved.
+
+not_evidenced must never become inferred architecture.
