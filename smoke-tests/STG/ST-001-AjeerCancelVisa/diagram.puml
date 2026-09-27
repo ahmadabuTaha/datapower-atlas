@@ -1,0 +1,64 @@
+@startuml
+title STG — AjeerCancelVisa Evidence-Based Service Journey
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+package "STG domain" {
+  component "HTTP Front-Side Handler\nAjeerCancelVisa_HTTPHandler" as FSH
+  component "AjeerCancelVisa\nMulti-Protocol Gateway" as MPG
+  component "Processing Policy\nAjeerCancelVisa" as POLICY
+  component "Default match evidence\n__default-accept-service-providers__" as MATCH
+  component "Processing Rule\nAjeerCancelVisa_rule_0" as RULE
+  component "GatewayScript Action\nAjeerCancelVisa_rule_0_gatewayscript_0" as GS_ACTION
+  artifact "local:///AjeerCancelVisa/\nAjeerCancelVisa.js" as GS
+  component "Set skip-backside\nvar://service/mpgw/skip-backside = 1" as SKIP
+  component "Results Action" as RESULTS
+  component "TLS Client Profile\nAjeerCancelVisa-ClientProfile" as TLS
+  component "XML Manager\ndefault" as XMLM
+
+  artifact "store:///filter-reject-all.xsl\nunresolved platform resource" as FILTER #FFF2CC
+  artifact "store:///identity.xsl\nunresolved platform resource" as IDENTITY #FFF2CC
+}
+
+cloud "Dynamic HTTPS destination\nPOST\nhttps://preprod.gw-proxy.tamkeen.cloud\n+ var://service/URI\nremote identity/topology not evidenced" as DYNAMIC
+
+FSH --> MPG : confirmed ingress
+MPG --> POLICY : confirmed policy
+POLICY --> MATCH : confirmed match statement
+MATCH --> RULE : confirmed rule
+RULE --> GS_ACTION : confirmed action
+RULE --> SKIP : confirmed action
+RULE --> RESULTS : confirmed action
+GS_ACTION --> GS : confirmed executable
+GS --> DYNAMIC : confirmed script-mediated egress\nurlopen.open / POST
+MPG --> TLS : confirmed dependency
+MPG --> XMLM : confirmed dependency
+POLICY -[#E67E22,dashed]-> FILTER : unresolved
+POLICY -[#E67E22,dashed]-> IDENTITY : unresolved
+
+note right of MPG
+  Confirmed configured backend:
+  https://preprod.gw-proxy.tamkeen.cloud
+
+  Configuration evidence only.
+  skip-backside prevents inferring
+  a second normal backside call.
+end note
+
+legend left
+  |= Representation |= Evidence state |
+  | Solid arrow | confirmed |
+  | Dotted arrow | candidate (none in this view) |
+  | Orange dashed arrow | unresolved |
+endlegend
+
+' Evidence:
+' index/STG/service_journeys.jsonl — AjeerCancelVisa only
+' index/STG/operation_journeys.jsonl — op:STG:STG:438702032f781bbc4e77 only
+' index/STG/service_journey_findings.csv — AjeerCancelVisa only
+' index/STG/file_relationships.csv — AjeerCancelVisa.js only
+' export-stg-uat/extracted/STG/local/AjeerCancelVisa/AjeerCancelVisa.js
+' Raw CFG content was not opened; Journey provenance points to STG.cfg.
+@enduml

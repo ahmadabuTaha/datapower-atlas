@@ -1,13 +1,14 @@
 # DataPower Atlas
+<img src="image/cover.jpg" width="50%" >
 
 **Evidence-driven architecture reconstruction for IBM DataPower
 modernization.**
 
-DataPower Atlas transforms raw IBM DataPower exports into structured,
-traceable architecture evidence that can be used to reconstruct the
+DataPower Atlas transforms raw IBM DataPower exports into structured, Indexed
+and traceable architecture evidence that can be used to reconstruct the
 AS-IS landscape, understand service and operation behavior, derive
-functional capabilities, and support evidence-based modernization and
-replacement analysis.
+functional capabilities, Draw User Journey and support evidence-based modernization and
+,replacement analysis.
 
 Atlas is not a generic DataPower documentation generator and it is not a
 configuration beautifier. Its first responsibility is to reconstruct the

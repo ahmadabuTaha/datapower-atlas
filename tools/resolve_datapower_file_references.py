@@ -8,6 +8,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Tuple
+from weakref import ref
 
 
 RESOLVER_VERSION = "1.0-architecture-beta-exact-path"
@@ -98,7 +99,10 @@ def resolve(
         if (ref.get("reference_family") or "") != "file_reference":
             continue
 
+        #env = (ref.get("environment") or "").strip()
         env = (ref.get("environment") or "").strip()
+        domain = (ref.get("domain") or "").strip()
+
         raw = ref.get("target_name") or ref.get("raw_reference") or ""
         normalized_path, norm_status = normalize_relative_path(raw)
 
@@ -135,7 +139,8 @@ def resolve(
             })
             continue
 
-        candidates = index.get((env, normalized_path), [])
+        #candidates = index.get((env, normalized_path), [])
+        candidates = index.get((domain, normalized_path), [])
 
         if len(candidates) == 0:
             unresolved.append({
@@ -189,7 +194,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
             "Resolve DataPower file references against canonical File Inventory "
-            "using exact environment + normalized relative_path matching."
+            #"using exact environment + normalized relative_path matching."
+            "exact domain-local scope + normalized relative_path matching."
         )
     )
     ap.add_argument("--references", required=True)
