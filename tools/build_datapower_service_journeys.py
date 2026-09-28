@@ -494,6 +494,82 @@ def extract_database_semantic_facts(text: str, path: Path, file_row: Dict[str, A
     return facts
 
 
+def extract_xslt_outbound_semantic_facts(
+    text: str, path: Path, file_row: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Extract executable DataPower XSLT outbound calls and their targets.
+
+    URI-shaped strings elsewhere in a stylesheet (including namespace and
+    schema identifiers) are not outbound evidence. Only a url-open extension
+    element in the DataPower namespace establishes an outbound call.
+    """
+    facts: List[Dict[str, Any]] = []
+    variables: Dict[str, str] = {}
+    owning_action = first_nonempty(file_row, "source_object_id")
+    parser = expat.ParserCreate(namespace_separator="}")
+    datapower_url_open = "http://www.datapower.com/extensions}url-open"
+    xslt_variable = "http://www.w3.org/1999/XSL/Transform}variable"
+
+    def resolve_target(expression: str) -> Tuple[str, str, List[str]]:
+        raw = expression.strip()
+        inner = raw[1:-1].strip() if raw.startswith("{") and raw.endswith("}") else raw
+        if inner.startswith("$") and re.fullmatch(r"\$[A-Za-z_][\w.-]*", inner):
+            variable_name = inner[1:]
+            variable_expression = variables.get(variable_name, "")
+            value, value_type = xpath_literal_value(variable_expression)
+            if value_type == "literal":
+                return value, "static", [inner]
+            return "", "dynamic_or_runtime_computed", [inner]
+        value, value_type = xpath_literal_value(inner)
+        if value_type == "literal":
+            return value, "static", []
+        if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", value):
+            return value, "static", []
+        dynamic_components = unique_keep_order(re.findall(r"\$[A-Za-z_][\w.-]*", inner))
+        return "", "dynamic_or_runtime_computed", dynamic_components
+
+    def start_element(name: str, attributes: Dict[str, str]) -> None:
+        local_attributes = {
+            key.rsplit("}", 1)[-1].rsplit(":", 1)[-1]: value
+            for key, value in attributes.items()
+        }
+        if name == xslt_variable:
+            variable_name = local_attributes.get("name", "")
+            select = local_attributes.get("select", "")
+            if variable_name and select:
+                variables[variable_name] = select
+            return
+        if name != datapower_url_open:
+            return
+
+        target_expression = local_attributes.get("target", "")
+        target, destination_type, dynamic_components = resolve_target(target_expression)
+        scheme_match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*):", target)
+        protocol = scheme_match.group(1).lower() if scheme_match else "dynamic"
+        facts.append({
+            "fact_type": "outbound_http_request" if protocol in {"http", "https"} else "outbound_request",
+            "mechanism": "xslt",
+            "method": "",
+            "protocol": protocol,
+            "targets": [target] if target else [],
+            "target_expression": target_expression,
+            "destination_type": destination_type,
+            "dynamic_components": dynamic_components,
+            "certainty": "confirmed",
+            "artifact_path": str(path),
+            "source_path": str(path),
+            "source_line": parser.CurrentLineNumber,
+            "source_object_id": owning_action,
+        })
+
+    parser.StartElementHandler = start_element
+    try:
+        parser.Parse(text, True)
+    except expat.ExpatError:
+        return []
+    return facts
+
+
 def extract_skip_backside_evidence(rows: List[Dict[str, str]]) -> List[Tuple[str, Optional[bool], Dict[str, Any]]]:
     """Extract only explicit skip-backside facts.
 
@@ -579,20 +655,8 @@ def extract_semantic_facts(file_row: Dict[str, Any], artifact_root: Optional[Pat
             "source_object_id": first_nonempty(file_row, "source_object_id"),
         })
 
-    if is_xslt and re.search(r"(?:dp:)?url-open|urlopen", text, flags=re.IGNORECASE):
-        urls = extract_urls(text)
-        facts.append({
-            "fact_type": "outbound_http_request",
-            "mechanism": "xslt",
-            "method": "",
-            "targets": urls,
-            "destination_type": "static" if urls else "dynamic_or_runtime_computed",
-            "certainty": "confirmed",
-            "artifact_path": str(path),
-            "source_object_id": first_nonempty(file_row, "source_object_id"),
-        })
-
     if is_xslt:
+        facts.extend(extract_xslt_outbound_semantic_facts(text, path, file_row))
         facts.extend(extract_database_semantic_facts(text, path, file_row))
 
     return facts
@@ -735,7 +799,7 @@ def derive_actual_egress(
 
     semantic_targets: List[Dict[str, Any]] = []
     for fact in semantic_facts:
-        if fact.get("fact_type") != "outbound_http_request":
+        if fact.get("fact_type") not in {"outbound_http_request", "outbound_request"}:
             continue
         targets = fact.get("targets") or []
         if targets:
@@ -746,6 +810,7 @@ def derive_actual_egress(
                     "method": fact.get("method", ""),
                     "destination_type": fact.get("destination_type", "static"),
                     "dynamic_components": fact.get("dynamic_components", []),
+                    **({"protocol": fact["protocol"]} if fact.get("protocol") else {}),
                 })
         else:
             semantic_targets.append({
@@ -753,6 +818,7 @@ def derive_actual_egress(
                 "mechanism": fact.get("mechanism", ""),
                 "method": fact.get("method", ""),
                 "destination_type": fact.get("destination_type", "dynamic_or_runtime_computed"),
+                **({"protocol": fact["protocol"]} if fact.get("protocol") else {}),
             })
     if semantic_targets:
         return {

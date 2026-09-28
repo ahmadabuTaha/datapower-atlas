@@ -4,3 +4,6 @@ DS_Store
 __pycache__/
 *.py[cod]git 
 /smoke-test/
+/smoke-tests/
+/reports/
+/outputs/

@@ -81,10 +81,26 @@ def tcp_direct_state(journey: Dict[str, Any]) -> Dict[str, bool]:
             "complete": False,
         }
 
-    local_address = str(direct.get("local_address", "")).strip()
-    local_port = str(direct.get("local_port", "")).strip()
-    dest_address = str(direct.get("destination_address", "")).strip()
-    dest_port = str(direct.get("destination_port", "")).strip()
+    # The frozen Service Journey Builder materializes current direct-path
+    # evidence as ingress/egress record lists.  Retain compatibility with the
+    # earlier flat representation so old generated bundles remain analyzable.
+    ingress = direct.get("ingress", [])
+    egress = direct.get("egress", [])
+    ingress_record = ingress[0] if isinstance(ingress, list) and ingress else {}
+    egress_record = egress[0] if isinstance(egress, list) and egress else {}
+
+    local_address = str(
+        direct.get("local_address", "") or ingress_record.get("listen_address", "")
+    ).strip()
+    local_port = str(
+        direct.get("local_port", "") or ingress_record.get("listen_port", "")
+    ).strip()
+    dest_address = str(
+        direct.get("destination_address", "") or egress_record.get("host", "")
+    ).strip()
+    dest_port = str(
+        direct.get("destination_port", "") or egress_record.get("port", "")
+    ).strip()
 
     has_ingress = bool(local_address and local_port)
     has_egress = bool(dest_address and dest_port)
@@ -134,7 +150,17 @@ def main() -> int:
     for r in relationships:
         outgoing[r["source_object_id"]].append(r)
 
-    operation_count = Counter(o["parent_service_name"] for o in operations)
+    # The compact operation summary does not carry parent_service_id.  Use the
+    # complete domain-local service identity instead of logical name alone.
+    operation_count = Counter(
+        (
+            o.get("environment", ""),
+            o.get("domain", ""),
+            o.get("parent_service_type", ""),
+            o.get("parent_service_name", ""),
+        )
+        for o in operations
+    )
 
     rows = []
 
@@ -245,7 +271,12 @@ def main() -> int:
                 ))
 
         # Processing concentration.
-        op_count = operation_count.get(root_name, 0)
+        op_count = operation_count.get((
+            s.get("environment", ""),
+            journey.get("domain", "") or s.get("domain", ""),
+            root_type,
+            root_name,
+        ), 0)
         if op_count >= 50:
             findings.append((
                 "mega_processing_policy",
@@ -317,9 +348,13 @@ def main() -> int:
         for finding_type, severity, reason in findings:
             rows.append({
                 "environment": s.get("environment", ""),
-                "domain": next(
-                    (r.get("domain", "") for r in outgoing.get(root_id, []) if r.get("domain")),
-                    ""
+                "domain": (
+                    journey.get("domain", "")
+                    or s.get("domain", "")
+                    or next(
+                        (r.get("domain", "") for r in outgoing.get(root_id, []) if r.get("domain")),
+                        ""
+                    )
                 ),
                 "service_id": root_id,
                 "service_type": root_type,

@@ -353,6 +353,7 @@ stage "11/11 - ANALYZE JOURNEY QUALITY"
 
 "$PYTHON_BIN" tools/analyze_journey_quality.py \
   --summary "${DOMAIN_INDEX}/service_journey_summary.csv" \
+  --journeys "${DOMAIN_INDEX}/service_journeys.jsonl" \
   --objects "${DOMAIN_INDEX}/objects.csv" \
   --properties "${DOMAIN_INDEX}/object_properties.csv" \
   --relationships "${DOMAIN_INDEX}/relationships.csv" \

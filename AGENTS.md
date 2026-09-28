@@ -485,7 +485,13 @@ Operation Journey Builder has passed validation on:
 - STG
 - STG-Replica
 
-Journey Quality Analyzer becomes frozen after final validation is recorded.
+Journey Quality Analyzer is frozen after the STG end-to-end regression validated
+the TCP direct-path representation, domain-safe operation counting, and pipeline
+journey input on 2026-09-28.
+
+The STG AS-IS user-journey aggregation outputs produced from that validated
+evidence are frozen at the same baseline. Reopen only under the freeze criteria
+defined above.
 
 Do not reopen these components for Journey enrichment alone.
 
