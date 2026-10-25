@@ -1,7 +1,7 @@
 /export-stg-uat/
 /index/
 .DS_Store
-__pycache__/
+/__pycache__/
 *.py[cod]git 
 /smoke-test/
 /smoke-tests/
