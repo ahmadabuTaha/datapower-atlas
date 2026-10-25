@@ -106,9 +106,23 @@ tools/run_domain_pipeline.sh
 
 For normal domain processing, use the orchestrator rather than manually executing individual stages:
 
-```bash
-tools/run_domain_pipeline.sh
 ```
+# Minimum Parameters
+./tools/run_domain_pipeline.sh --domain <<Datapower_Domain>>
+```
+```
+# All Parameters
+./tools/run_domain_pipeline.sh \
+  --domain "<<DataPower_Domain>>" \
+  --environment "DEV/SIT/STG/UAT" \
+  --cfg "exported_dir/extracted/DOMAIN_NAME/config/DOMAIN_NAME.cfg" \
+  --export-dir "exported_dir/extracted" \
+  --taxonomy-dir "taxonomy" \
+  --index-root "index" \
+  --reports-root "reports" \
+  --python ".venv/bin/python"
+```
+
 
 The orchestrator is the authoritative execution path for producing final domain outputs.
 
