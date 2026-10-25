@@ -1,10 +1,10 @@
 /export-stg-uat/
 /index/
-DS_Store
+.DS_Store
 __pycache__/
 *.py[cod]git 
 /smoke-test/
 /smoke-tests/
 /reports/
 /outputs/
-tests/
+/tests/
